@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  ocr-server:
+    build: .
+    container_name: receipt-ocr-server
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    # Optional: Mount a cache directory to avoid re-downloading models on restart
+    volumes:
+      - ocr-models:/root/.paddleocr
+    # Resource limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+volumes:
+  ocr-models:
