@@ -6,13 +6,13 @@ function ExpenseTable({ expenses, onExpenseChange, onDeleteExpense }) {
       <table className="w-full text-sm md:text-base">
         <thead>
           <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-            <th className="px-3 md:px-4 py-3 text-left font-bold">Date</th>
-            <th className="px-3 md:px-4 py-3 text-left font-bold">Receipt No</th>
-            <th className="px-3 md:px-4 py-3 text-left font-bold">Description</th>
-            <th className="px-3 md:px-4 py-3 text-center font-bold">Amount</th>
-            <th className="px-3 md:px-4 py-3 text-center font-bold">Currency</th>
-            <th className="px-3 md:px-4 py-3 text-right font-bold">Amount AED</th>
-            <th className="px-3 md:px-4 py-3 text-center font-bold">Action</th>
+            <th className="px-3 md:px-4 py-3 text-left font-bold min-w-[140px]">Date</th>
+            <th className="px-3 md:px-4 py-3 text-left font-bold min-w-[90px]">Receipt No</th>
+            <th className="px-3 md:px-4 py-3 text-left font-bold min-w-[200px]">Description</th>
+            <th className="px-3 md:px-4 py-3 text-center font-bold min-w-[110px]">Amount</th>
+            <th className="px-3 md:px-4 py-3 text-center font-bold min-w-[90px]">Currency</th>
+            <th className="px-3 md:px-4 py-3 text-right font-bold min-w-[115px]">Amount AED</th>
+            <th className="px-3 md:px-4 py-3 text-center font-bold min-w-[60px]">Action</th>
           </tr>
         </thead>
         <tbody>

@@ -9,23 +9,59 @@ import Toast from './components/Toast'
 import ReceiptScanner from './components/ReceiptScanner'
 import './App.css'
 
+const SAVE_KEY = 'smart-petty-cash-data'
+
+const loadFromLocalStorage = () => {
+  try {
+    const saved = localStorage.getItem(SAVE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      console.log('🔄 Session restored from LocalStorage:', parsed)
+      return parsed
+    }
+  } catch (e) {
+    console.error('Failed to restore session:', e)
+  }
+  return null
+}
+
 function App() {
-  const [formData, setFormData] = useState({
-    name: '',
-    date: '',
-    location: '',
-    title: '',
-    expenseTitle: '',
-    notes: ''
+  const [formData, setFormData] = useState(() => {
+    const saved = loadFromLocalStorage()
+    return saved?.formData || {
+      name: '',
+      date: '',
+      location: '',
+      title: '',
+      expenseTitle: ''
+    }
   })
 
-  const [expenses, setExpenses] = useState([])
+  const [expenses, setExpenses] = useState(() => {
+    const saved = loadFromLocalStorage()
+    return saved?.expenses || []
+  })
 
   const [toast, setToast] = useState(null)
 
   const [viewMode, setViewMode] = useState('form')
   const [isExporting, setIsExporting] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+
+  // ── Local Storage Persistence ──────────────────────────────────────────
+  const saveToLocalStorage = (data) => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data))
+      console.log('💾 Session autosaved to LocalStorage:', data)
+    } catch (e) {
+      console.error('Failed to persist session:', e)
+    }
+  }
+
+  // Auto-save whenever formData or expenses change
+  useEffect(() => {
+    saveToLocalStorage({ formData, expenses })
+  }, [formData, expenses])
 
   // Dynamic preview scale to fit the 1200px-wide document on any screen
   const [previewScale, setPreviewScale] = useState(1)
@@ -138,7 +174,7 @@ function App() {
     }
 
     setPages(computedPages)
-  }, [expenses, formData.name, formData.date, formData.location, formData.title, formData.expenseTitle, formData.notes])
+  }, [expenses, formData.name, formData.date, formData.location, formData.title, formData.expenseTitle])
 
   const handleFormChange = (e) => {
     const { name, value } = e.target
@@ -179,7 +215,8 @@ function App() {
       description: scannedData.description || '',
       amount: scannedData.amount || '',
       currency: scannedData.currency || 'AED',
-      amountAED: ''
+      amountAED: '',
+      receiptImage: scannedData.receiptImage || ''
     };
 
     // Auto-calculate AED amount if we have amount + currency
@@ -317,10 +354,10 @@ function App() {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
       }
 
-      pdf.save(`expense_${formData.date || 'report'}.pdf`)
-      showToast({ message: 'PDF downloaded successfully with perfect alignment!', type: 'success' })
+      pdf.save(`expense_${formData.date || 'report'}.pdf`);
+      showToast({ message: 'PDF downloaded successfully with perfect alignment!', type: 'success' });
     } catch (error) {
-      console.error('PDF generation failed:', error)
+      console.error('PDF generation failed:', error);
       showToast({ message: 'Failed to generate PDF. Please try again.', type: 'error' })
     } finally {
       setIsExporting(false)
@@ -398,10 +435,6 @@ function App() {
 
           {/* Totals Section */}
           <div id="measure-totals" className="flex flex-col sm:flex-row justify-between items-end gap-8 bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl border-2 border-blue-200 mt-6">
-            <div className="w-full">
-              <label className="text-sm font-bold text-gray-600 uppercase tracking-widest">Notes</label>
-              <p className="text-gray-950 mt-2 text-lg md:text-xl font-extrabold">{formData.notes || 'N/A'}</p>
-            </div>
             <div className="text-right w-full sm:w-auto shrink-0">
               <p className="text-xs font-bold mb-2 tracking-widest text-gray-500 uppercase">TOTAL</p>
               <p className="text-4xl md:text-5xl font-black text-blue-700 tracking-tight">{calculateTotal()}</p>
@@ -514,18 +547,7 @@ function App() {
 
               <div className="mt-6 pt-6 border-t-2 border-gray-200">
                 <div className="flex justify-between items-end">
-                  <div className="flex gap-4 flex-col sm:flex-row flex-1">
-                    <div className="w-full">
-                      <label className="text-sm text-gray-600 font-medium">Notes</label>
-                      <textarea
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleFormChange}
-                        className="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                        rows="2"
-                      />
-                    </div>
-                  </div>
+                  <div className="flex-1" />
                   <div className="text-right ml-4">
                     <p className="text-gray-600 font-medium mb-2">TOTAL</p>
                     <p className="text-3xl font-bold text-blue-600">
@@ -533,7 +555,6 @@ function App() {
                     </p>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
@@ -579,8 +600,10 @@ function App() {
 }
 
 function PDFDocument({ formData, expenses, total, pages, isExport = false }) {
-  if (!pages || pages.length === 0) return null
-  const totalPages = pages.length
+  if (!pages || pages.length === 0) return null;
+
+  const receiptExpenses = expenses.filter(exp => exp.receiptImage);
+  const totalPages = pages.length + receiptExpenses.length;
 
   return (
     <div className={`flex flex-col gap-8 ${isExport ? '' : 'items-center bg-slate-200 py-8 rounded-3xl'}`}>
@@ -680,10 +703,6 @@ function PDFDocument({ formData, expenses, total, pages, isExport = false }) {
           <div>
             {page.showTotals && (
               <div className="flex flex-col sm:flex-row justify-between items-end gap-8 bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl border-2 border-blue-200 mb-6">
-                <div className="w-full">
-                  <label className="text-sm font-bold text-gray-600 uppercase tracking-widest">Notes</label>
-                  <p className="text-gray-950 mt-2 text-lg md:text-xl font-extrabold">{formData.notes || 'N/A'}</p>
-                </div>
                 <div className="text-right w-full sm:w-auto shrink-0">
                   <p className="text-xs font-bold mb-2 tracking-widest text-gray-500 uppercase">TOTAL</p>
                   <p className="text-4xl md:text-5xl font-black text-blue-700 tracking-tight">{total}</p>
@@ -701,8 +720,45 @@ function PDFDocument({ formData, expenses, total, pages, isExport = false }) {
           </div>
         </div>
       ))}
+
+      {/* Scanned Receipt Pages */}
+      {receiptExpenses.map((expense, index) => (
+        <div
+          key={`receipt-page-${expense.id}`}
+          data-pdf-page="true"
+          className="bg-white shadow-2xl relative p-12 flex flex-col justify-between"
+          style={{
+            width: '1200px',
+            height: '1700px',
+            minHeight: '1700px',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div>
+            <div className="mb-8 flex justify-between items-center border-b-2 border-gray-200 pb-4">
+              <span className="text-2xl font-black tracking-widest text-blue-950">MANLIFT</span>
+              <span className="text-lg text-gray-500 font-extrabold uppercase">Scanned Receipt Page</span>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-6">
+              Receipt No: {expense.receiptNo} — {expense.description || 'Scanned Bill'}
+            </h3>
+            <div className="flex justify-center items-center border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50" style={{ height: '1300px' }}>
+              <img
+                src={expense.receiptImage}
+                alt={`Receipt #${expense.receiptNo}`}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-md"
+              />
+            </div>
+          </div>
+          <div className="flex justify-between items-center text-base font-bold text-gray-500 border-t-2 border-gray-200 pt-4">
+            <p className="tracking-wider">MANLIFT GROUP</p>
+            <p className="uppercase tracking-widest">Page {pages.length + index + 1} of {totalPages}</p>
+            <p className="tracking-widest">CONFIDENTIAL</p>
+          </div>
+        </div>
+      ))}
     </div>
-  )
+  );
 }
 
 export default App

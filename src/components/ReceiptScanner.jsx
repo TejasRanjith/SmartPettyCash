@@ -105,8 +105,22 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
         }
       });
 
-      onScanComplete(parsedData);
-      cleanup();
+      // Convert imageFile to Base64 and pass it along with parsed data
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Data = reader.result;
+        onScanComplete({
+          ...parsedData,
+          receiptImage: base64Data
+        });
+        cleanup();
+      };
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+        alert('Failed to read image for PDF embedding. Please try again.');
+        cleanup();
+      };
+      reader.readAsDataURL(imageFile);
     } catch (err) {
       console.error('Scan failed:', err);
       alert(err.message || 'Failed to scan receipt. Please try again.');
