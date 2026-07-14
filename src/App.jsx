@@ -207,6 +207,25 @@ function App() {
   }
 
   const handleScanComplete = useCallback((scannedData) => {
+    // Check if duplicate scanned receipt exists (by comparing date, amount, and currency)
+    const scanAmount = scannedData.amount ? parseFloat(scannedData.amount).toFixed(2) : '';
+    const isDuplicate = expenses.some(exp => {
+      const expAmount = exp.amount ? parseFloat(exp.amount).toFixed(2) : '';
+      return (
+        exp.date === (scannedData.date || '') &&
+        expAmount === scanAmount &&
+        exp.currency === (scannedData.currency || 'AED')
+      );
+    });
+
+    if (isDuplicate) {
+      showToast({
+        message: `Duplicate receipt detected! An expense for ${scannedData.amount || '0.00'} ${scannedData.currency || 'AED'} on ${scannedData.date || 'unknown date'} is already in the list.`,
+        type: 'error'
+      });
+      return;
+    }
+
     // Create a new expense entry with scanned data
     const newExpense = {
       id: Date.now(),
@@ -227,7 +246,7 @@ function App() {
 
     setExpenses(prev => [...prev, newExpense]);
     showToast({ message: 'Receipt scanned! Expense entry added.', type: 'success' });
-  }, [expenses.length, conversionRates]);
+  }, [expenses, conversionRates]);
 
   const handleExpenseChange = (id, field, value) => {
     setExpenses(expenses.map(expense => {
@@ -294,6 +313,22 @@ function App() {
         showToast({ message: `Expense row #${i + 1} has empty fields. Please fill all columns.`, type: 'error' })
         return false
       }
+    }
+
+    // Check for duplicate expense rows (same date, description, amount, and currency)
+    const seen = new Set();
+    for (let i = 0; i < expenses.length; i++) {
+      const exp = expenses[i];
+      const amountStr = exp.amount ? parseFloat(exp.amount).toFixed(2) : '';
+      const key = `${exp.date}|${exp.description.toLowerCase().trim()}|${amountStr}|${exp.currency}`;
+      if (seen.has(key)) {
+        showToast({
+          message: `Duplicate expense rows detected! Row #${i + 1} is identical to an earlier entry (Date: ${exp.date}, Amount: ${exp.amount} ${exp.currency}). Please make entries unique or delete duplicates.`,
+          type: 'error'
+        });
+        return false;
+      }
+      seen.add(key);
     }
 
     return true
