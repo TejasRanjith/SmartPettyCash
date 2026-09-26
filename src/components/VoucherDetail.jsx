@@ -211,7 +211,12 @@ export default function VoucherDetail() {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    // Enforce text-only constraint for name, location, and title/designation
+    let cleanValue = value
+    if (name === 'name' || name === 'title' || name === 'location') {
+      cleanValue = value.replace(/[0-9]/g, '')
+    }
+    setFormData(prev => ({ ...prev, [name]: cleanValue }))
   }
 
   const handleAddExpense = () => {
@@ -330,6 +335,20 @@ export default function VoucherDetail() {
     }
     if (!formData.expenseTitle.trim()) {
       showToast({ message: 'Please enter the expense title', type: 'error' })
+      return false
+    }
+
+    // Check that text fields do not contain numbers or digits
+    if (/\d/.test(formData.name)) {
+      showToast({ message: 'Employee Name cannot contain numbers or digits', type: 'error' })
+      return false
+    }
+    if (/\d/.test(formData.location)) {
+      showToast({ message: 'Location cannot contain numbers or digits', type: 'error' })
+      return false
+    }
+    if (/\d/.test(formData.title)) {
+      showToast({ message: 'Title / Position cannot contain numbers or digits', type: 'error' })
       return false
     }
 
