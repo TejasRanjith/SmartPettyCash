@@ -37,6 +37,11 @@ export default function VoucherDetail() {
     return null
   }, [id])
 
+  const [voucherCode, setVoucherCode] = useState(() => {
+    const voucher = getVoucher()
+    return voucher?.voucherCode || formatVoucherCode(id || Date.now())
+  })
+
   const [formData, setFormData] = useState(() => {
     const voucher = getVoucher()
     return voucher?.formData || {
@@ -62,6 +67,7 @@ export default function VoucherDetail() {
   useEffect(() => {
     const voucher = getVoucher()
     if (voucher) {
+      setVoucherCode(voucher.voucherCode || formatVoucherCode(voucher.id || id))
       setFormData(voucher.formData || {
         name: '',
         date: new Date().toISOString().split('T')[0],
@@ -79,23 +85,24 @@ export default function VoucherDetail() {
     try {
       const saved = localStorage.getItem(VOUCHERS_KEY)
       const vouchers = saved ? JSON.parse(saved) : []
+      const currentCode = voucherCode || formatVoucherCode(id)
       const exists = vouchers.some(v => v.id === parseInt(id))
       
       let updatedVouchers
       if (exists) {
         updatedVouchers = vouchers.map(v => 
-          v.id === parseInt(id) ? { ...v, formData, expenses } : v
+          v.id === parseInt(id) ? { ...v, voucherCode: v.voucherCode || currentCode, formData, expenses } : v
         )
       } else {
-        updatedVouchers = [...vouchers, { id: parseInt(id), formData, expenses }]
+        updatedVouchers = [...vouchers, { id: parseInt(id), voucherCode: currentCode, isFavourite: false, formData, expenses }]
       }
 
       localStorage.setItem(VOUCHERS_KEY, JSON.stringify(updatedVouchers))
-      console.log(`💾 Voucher #${id} autosaved to LocalStorage`)
+      console.log(`💾 Voucher #${id} (${currentCode}) autosaved to LocalStorage`)
     } catch (e) {
       console.error('Failed to persist voucher:', e)
     }
-  }, [formData, expenses, id])
+  }, [formData, expenses, id, voucherCode])
 
   // Dynamic preview scale to fit the 1200px-wide document on any screen
   const [previewScale, setPreviewScale] = useState(1)
@@ -439,7 +446,8 @@ export default function VoucherDetail() {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
       }
 
-      const pdfFileName = `${formatVoucherCode(new Date())}.pdf`;
+      const currentVoucherCode = voucherCode || formatVoucherCode(id || Date.now());
+      const pdfFileName = `${currentVoucherCode}.pdf`;
       pdf.save(pdfFileName);
       showToast({ message: `Exported ${pdfFileName} successfully!`, type: 'success' });
     } catch (error) {
@@ -576,7 +584,7 @@ export default function VoucherDetail() {
               Preview
             </button>
             <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded border border-blue-200 ml-1">
-              {formatVoucherCode(id || Date.now())}
+              {voucherCode || formatVoucherCode(id || Date.now())}
             </span>
           </div>
 
