@@ -133,6 +133,11 @@ const single = await voucherService.getVoucherById(created.id)
 console.log('getVoucherById retrieved:', single?.voucherCode)
 if (single?.voucherCode !== 'exp_voucher_260930-999999') throw new Error('getVoucherById failed')
 
+// 3b. Read Synchronous Local Voucher By ID
+const syncLocal = voucherService.getLocalVoucherById(created.id)
+console.log('getLocalVoucherById retrieved:', syncLocal?.voucherCode)
+if (syncLocal?.voucherCode !== 'exp_voucher_260930-999999') throw new Error('getLocalVoucherById failed')
+
 // 4. Update without isFavourite (must preserve isFavourite: true)
 await voucherService.updateVoucher(created.id, {
   voucherCode: single.voucherCode,

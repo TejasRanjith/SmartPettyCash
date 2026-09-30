@@ -167,6 +167,21 @@ export function mapAppToDbExpenses(expenses = [], voucherId) {
 
 export const voucherService = {
   /**
+   * Synchronous local storage accessors
+   */
+  getLocalVouchers() {
+    return getLocalVouchers()
+  },
+
+  saveLocalVouchers(vouchers) {
+    return saveLocalVouchers(vouchers)
+  },
+
+  getLocalVoucherById(id) {
+    return getLocalVoucherById(id)
+  },
+
+  /**
    * Check if Supabase cloud is configured and ready
    */
   isCloudEnabled() {

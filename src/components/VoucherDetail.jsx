@@ -10,27 +10,41 @@ import Toast from './Toast'
 import ReceiptScanner from './ReceiptScanner'
 import { formatVoucherCode } from '../utils/voucherUtils'
 import { useTheme } from '../context/ThemeContext'
-import { voucherService } from '../services/voucherService'
+import { voucherService, getLocalVoucherById } from '../services/voucherService'
 
 export default function VoucherDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { theme, toggleTheme, isDark } = useTheme()
 
+  const findCachedVoucher = useCallback(() => {
+    try {
+      if (typeof voucherService?.getLocalVoucherById === 'function') {
+        return voucherService.getLocalVoucherById(id)
+      }
+      if (typeof getLocalVoucherById === 'function') {
+        return getLocalVoucherById(id)
+      }
+    } catch (e) {
+      console.warn('Error reading cached voucher:', e)
+    }
+    return null
+  }, [id])
+
   const [voucherCode, setVoucherCode] = useState(() => {
-    const voucher = voucherService.getLocalVoucherById(id)
+    const voucher = findCachedVoucher()
     if (voucher?.voucherCode) return voucher.voucherCode
     if (String(id).startsWith('exp_voucher_')) return id
     return ''
   })
 
   const [isFavourite, setIsFavourite] = useState(() => {
-    const voucher = voucherService.getLocalVoucherById(id)
+    const voucher = findCachedVoucher()
     return Boolean(voucher?.isFavourite)
   })
 
   const [formData, setFormData] = useState(() => {
-    const voucher = voucherService.getLocalVoucherById(id)
+    const voucher = findCachedVoucher()
     return voucher?.formData || {
       name: '',
       date: new Date().toISOString().split('T')[0],
@@ -41,7 +55,7 @@ export default function VoucherDetail() {
   })
 
   const [expenses, setExpenses] = useState(() => {
-    const voucher = voucherService.getLocalVoucherById(id)
+    const voucher = findCachedVoucher()
     return voucher?.expenses || []
   })
 
@@ -51,7 +65,7 @@ export default function VoucherDetail() {
   const [showScanner, setShowScanner] = useState(false)
 
   // Guard to ensure auto-save does NOT overwrite existing cloud data before initial load completes
-  const isInitialLoaded = useRef(Boolean(voucherService.getLocalVoucherById(id)))
+  const isInitialLoaded = useRef(Boolean(findCachedVoucher()))
 
   // Reload / sync voucher from voucherService if ID changes or on mount
   useEffect(() => {
