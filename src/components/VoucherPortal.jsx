@@ -13,22 +13,43 @@ import {
   User, 
   DollarSign, 
   Filter,
-  CheckCircle2
+  LayoutGrid,
+  FileSpreadsheet,
+  List,
+  AlignJustify,
+  ArrowRight,
+  Briefcase,
+  FileText
 } from 'lucide-react'
 import { formatVoucherCode, calculateExpensesTotal } from '../utils/voucherUtils'
 
 const VOUCHERS_KEY = 'smart-petty-cash-vouchers'
 const LEGACY_SAVE_KEY = 'smart-petty-cash-data'
+const VIEW_MODE_KEY = 'smart-petty-cash-view-mode'
 
 export default function VoucherPortal() {
   const navigate = useNavigate()
   const [vouchers, setVouchers] = useState([])
   
-  // Search, Filter, Sort, and Group states
+  // Search, Filter, Sort, Group & View Mode states
   const [searchQuery, setSearchQuery] = useState('')
   const [favouritesOnly, setFavouritesOnly] = useState(false)
   const [sortBy, setSortBy] = useState('date-desc')
   const [groupBy, setGroupBy] = useState('none') // 'none' | 'location' | 'month' | 'employee'
+  
+  // View mode: 'grid' | 'descriptive' | 'detailed' | 'compact'
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem(VIEW_MODE_KEY) || 'grid'
+  })
+
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode)
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode)
+    } catch (e) {
+      console.error('Failed to save view mode:', e)
+    }
+  }
 
   // Load vouchers & migrate legacy data
   useEffect(() => {
@@ -136,7 +157,8 @@ export default function VoucherPortal() {
         const location = (v.formData?.location || '').toLowerCase()
         const title = (v.formData?.title || '').toLowerCase()
         const expTitle = (v.formData?.expenseTitle || '').toLowerCase()
-        return code.includes(q) || name.includes(q) || location.includes(q) || title.includes(q) || expTitle.includes(q)
+        const descriptions = (v.expenses || []).map(e => (e.description || '').toLowerCase()).join(' ')
+        return code.includes(q) || name.includes(q) || location.includes(q) || title.includes(q) || expTitle.includes(q) || descriptions.includes(q)
       })
     }
 
@@ -282,7 +304,7 @@ export default function VoucherPortal() {
           </div>
         </div>
 
-        {/* Controls Toolbar: Search, Sort, Group, Favourites, New Voucher */}
+        {/* Controls Toolbar: Search, Sort, Group, Favourites, View Modes, New Voucher */}
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
           <div className="flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
             
@@ -293,7 +315,7 @@ export default function VoucherPortal() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by code (e.g. exp_voucher_...), employee, location, or title..."
+                placeholder="Search by code (e.g. exp_voucher_...), employee, location, or description..."
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               />
               {searchQuery && (
@@ -316,7 +338,7 @@ export default function VoucherPortal() {
             </button>
           </div>
 
-          {/* Filter, Sort & Group Bar */}
+          {/* Filter, Sort, Group & View Mode Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 text-sm">
             
             <div className="flex flex-wrap items-center gap-2">
@@ -370,14 +392,66 @@ export default function VoucherPortal() {
               </div>
             </div>
 
-            {/* Results Count */}
-            <div className="text-xs text-gray-500 font-medium">
-              Showing <span className="font-bold text-gray-800">{filteredAndSortedVouchers.length}</span> of {vouchers.length} vouchers
+            {/* View Mode Switcher (Grid | Descriptive Grid | Detailed List | Compact List) */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 font-medium hidden sm:inline">View:</span>
+              <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                <button
+                  onClick={() => handleViewModeChange('grid')}
+                  className={`p-1.5 rounded-md transition-all ${
+                    viewMode === 'grid' 
+                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                  title="Grid View"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  onClick={() => handleViewModeChange('descriptive')}
+                  className={`p-1.5 rounded-md transition-all ${
+                    viewMode === 'descriptive' 
+                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                  title="Descriptive Grid View"
+                >
+                  <FileSpreadsheet size={16} />
+                </button>
+                <button
+                  onClick={() => handleViewModeChange('detailed')}
+                  className={`p-1.5 rounded-md transition-all ${
+                    viewMode === 'detailed' 
+                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                  title="Detailed Table View"
+                >
+                  <List size={16} />
+                </button>
+                <button
+                  onClick={() => handleViewModeChange('compact')}
+                  className={`p-1.5 rounded-md transition-all ${
+                    viewMode === 'compact' 
+                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                  title="Compact List View"
+                >
+                  <AlignJustify size={16} />
+                </button>
+              </div>
+
+              {/* Results Count */}
+              <div className="text-xs text-gray-500 font-medium pl-2 border-l border-gray-200">
+                <span className="font-bold text-gray-800">{filteredAndSortedVouchers.length}</span> of {vouchers.length}
+              </div>
             </div>
+
           </div>
         </div>
 
-        {/* Vouchers List / Grouped Display */}
+        {/* Vouchers Display (Based on selected viewMode) */}
         {filteredAndSortedVouchers.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-200">
             <div className="mx-auto w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
@@ -413,6 +487,7 @@ export default function VoucherPortal() {
           <div className="space-y-8">
             {Object.entries(groupedVouchers).map(([groupTitle, groupItems]) => (
               <div key={groupTitle} className="space-y-4">
+                
                 {/* Group Heading (if grouped) */}
                 {groupBy !== 'none' && (
                   <div className="flex items-center gap-3 pb-2 border-b-2 border-gray-200">
@@ -426,104 +501,371 @@ export default function VoucherPortal() {
                   </div>
                 )}
 
-                {/* Vouchers Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {groupItems.map(voucher => {
-                    const code = voucher.voucherCode || formatVoucherCode(voucher.id)
-                    const totalAmount = calculateExpensesTotal(voucher.expenses)
-                    const itemsCount = voucher.expenses?.length || 0
+                {/* 1. GRID VIEW */}
+                {viewMode === 'grid' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groupItems.map(voucher => {
+                      const code = voucher.voucherCode || formatVoucherCode(voucher.id)
+                      const totalAmount = calculateExpensesTotal(voucher.expenses)
+                      const itemsCount = voucher.expenses?.length || 0
 
-                    return (
-                      <div
-                        key={voucher.id}
-                        onClick={() => navigate(`/voucher/${voucher.id}`)}
-                        className={`bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
-                          voucher.isFavourite ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                      >
-                        {/* Card Top Row: Code, Star & Delete */}
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1 pr-2">
-                            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block mb-1">
-                              {code}
-                            </span>
-                            <h3 className="text-base font-bold text-gray-900 line-clamp-1">
-                              {voucher.formData?.expenseTitle || 'Expense Voucher'}
-                            </h3>
+                      return (
+                        <div
+                          key={voucher.id}
+                          onClick={() => navigate(`/voucher/${voucher.id}`)}
+                          className={`bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
+                            voucher.isFavourite ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-200 hover:border-blue-300'
+                          }`}
+                        >
+                          {/* Card Top Row: Code, Star & Delete */}
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1 pr-2">
+                              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block mb-1">
+                                {code}
+                              </span>
+                              <h3 className="text-base font-bold text-gray-900 line-clamp-1">
+                                {voucher.formData?.expenseTitle || 'Expense Voucher'}
+                              </h3>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => handleToggleFavourite(e, voucher.id)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  voucher.isFavourite 
+                                    ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' 
+                                    : 'text-gray-300 hover:text-amber-400 hover:bg-gray-100'
+                                }`}
+                                title={voucher.isFavourite ? 'Remove from Favourites' : 'Mark as Favourite'}
+                              >
+                                <Star size={18} className={voucher.isFavourite ? 'fill-amber-500' : ''} />
+                              </button>
+
+                              <button
+                                onClick={(e) => handleDeleteVoucher(e, voucher.id)}
+                                className="text-gray-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Delete Voucher"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-1">
-                            {/* Star Favourite Button */}
+                          {/* Card Meta details */}
+                          <div className="mb-4 space-y-1.5 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <User size={15} className="text-gray-400 shrink-0" />
+                              <span className="truncate">
+                                {voucher.formData?.name ? (
+                                  <span className="font-semibold text-gray-800">{voucher.formData.name}</span>
+                                ) : (
+                                  <span className="italic text-gray-400">Employee not specified</span>
+                                )}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <MapPin size={15} className="text-gray-400 shrink-0" />
+                              <span className="truncate">
+                                {voucher.formData?.location ? (
+                                  <span className="font-medium text-gray-700">{voucher.formData.location}</span>
+                                ) : (
+                                  <span className="italic text-gray-400">Location not specified</span>
+                                )}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Calendar size={15} className="text-gray-400 shrink-0" />
+                              <span className="text-xs text-gray-500">
+                                {voucher.formData?.date
+                                  ? new Date(voucher.formData.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : 'No date set'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Card Footer */}
+                          <div className="border-t border-gray-100 pt-3 flex justify-between items-center text-sm">
+                            <span className="text-xs font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                              {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
+                            </span>
+                            <span className="font-black text-blue-700 text-lg">
+                              {totalAmount} <span className="text-xs font-bold text-gray-500">AED</span>
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 2. DESCRIPTIVE GRID VIEW */}
+                {viewMode === 'descriptive' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {groupItems.map(voucher => {
+                      const code = voucher.voucherCode || formatVoucherCode(voucher.id)
+                      const totalAmount = calculateExpensesTotal(voucher.expenses)
+                      const itemsCount = voucher.expenses?.length || 0
+                      const receiptCount = (voucher.expenses || []).filter(e => e.receiptImage).length
+                      const previewExpenses = (voucher.expenses || []).slice(0, 3)
+
+                      return (
+                        <div
+                          key={voucher.id}
+                          onClick={() => navigate(`/voucher/${voucher.id}`)}
+                          className={`bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
+                            voucher.isFavourite ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200 hover:border-blue-300'
+                          }`}
+                        >
+                          {/* Card Header */}
+                          <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-100">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-mono text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                                  {code}
+                                </span>
+                                {receiptCount > 0 && (
+                                  <span className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">
+                                    📸 {receiptCount} {receiptCount === 1 ? 'Receipt' : 'Receipts'}
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="text-lg font-bold text-gray-900 mt-1">
+                                {voucher.formData?.expenseTitle || 'General Expense Voucher'}
+                              </h3>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => handleToggleFavourite(e, voucher.id)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  voucher.isFavourite 
+                                    ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' 
+                                    : 'text-gray-300 hover:text-amber-400 hover:bg-gray-100'
+                                }`}
+                              >
+                                <Star size={20} className={voucher.isFavourite ? 'fill-amber-500' : ''} />
+                              </button>
+
+                              <button
+                                onClick={(e) => handleDeleteVoucher(e, voucher.id)}
+                                className="text-gray-300 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Employee & Location Info Row */}
+                          <div className="grid grid-cols-2 gap-3 mb-4 bg-gray-50 p-3 rounded-xl text-xs">
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase tracking-wider block mb-0.5">Employee</span>
+                              <span className="font-bold text-gray-800 text-sm block truncate">
+                                {voucher.formData?.name || 'Not specified'}
+                              </span>
+                              <span className="text-gray-500 text-[11px] block truncate">
+                                {voucher.formData?.title || 'No position'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase tracking-wider block mb-0.5">Location & Date</span>
+                              <span className="font-bold text-gray-800 text-sm block truncate">
+                                {voucher.formData?.location || 'Not specified'}
+                              </span>
+                              <span className="text-gray-500 text-[11px] block">
+                                {voucher.formData?.date ? new Date(voucher.formData.date).toLocaleDateString() : 'No date'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Expense Breakdown Preview */}
+                          <div className="mb-4">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                              Expense Breakdown ({itemsCount} items)
+                            </span>
+                            {itemsCount === 0 ? (
+                              <p className="text-xs text-gray-400 italic py-2">No expense line items added yet.</p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {previewExpenses.map((exp, idx) => (
+                                  <div key={exp.id || idx} className="flex justify-between items-center text-xs py-1 px-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                                    <span className="truncate pr-2 text-gray-700 font-medium">
+                                      {exp.description || `Item #${exp.receiptNo || idx + 1}`}
+                                    </span>
+                                    <span className="font-bold text-gray-900 shrink-0 font-mono">
+                                      {exp.amountAED || exp.amount || '0.00'} AED
+                                    </span>
+                                  </div>
+                                ))}
+                                {itemsCount > 3 && (
+                                  <p className="text-[11px] text-blue-600 font-semibold text-right pt-0.5">
+                                    + {itemsCount - 3} more items...
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Card Bottom: Total & Open Action */}
+                          <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
+                            <div>
+                              <span className="text-[11px] text-gray-400 font-bold uppercase tracking-wider block">Total Amount</span>
+                              <span className="text-2xl font-black text-blue-700">
+                                {totalAmount} <span className="text-xs font-bold text-gray-500">AED</span>
+                              </span>
+                            </div>
+                            <span className="text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg">
+                              Open Voucher <ArrowRight size={14} />
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 3. DETAILED TABLE VIEW */}
+                {viewMode === 'detailed' && (
+                  <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          <tr>
+                            <th className="px-4 py-3 text-center w-10">⭐</th>
+                            <th className="px-4 py-3">Voucher Code</th>
+                            <th className="px-4 py-3">Expense Title</th>
+                            <th className="px-4 py-3">Employee</th>
+                            <th className="px-4 py-3">Location</th>
+                            <th className="px-4 py-3">Date</th>
+                            <th className="px-4 py-3 text-center">Items</th>
+                            <th className="px-4 py-3 text-right">Total (AED)</th>
+                            <th className="px-4 py-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {groupItems.map(voucher => {
+                            const code = voucher.voucherCode || formatVoucherCode(voucher.id)
+                            const totalAmount = calculateExpensesTotal(voucher.expenses)
+                            const itemsCount = voucher.expenses?.length || 0
+
+                            return (
+                              <tr 
+                                key={voucher.id}
+                                onClick={() => navigate(`/voucher/${voucher.id}`)}
+                                className={`hover:bg-blue-50/50 cursor-pointer transition-colors ${
+                                  voucher.isFavourite ? 'bg-amber-50/20' : ''
+                                }`}
+                              >
+                                <td className="px-4 py-3 text-center">
+                                  <button
+                                    onClick={(e) => handleToggleFavourite(e, voucher.id)}
+                                    className="text-gray-300 hover:text-amber-500 p-1"
+                                  >
+                                    <Star size={16} className={voucher.isFavourite ? 'fill-amber-500 text-amber-500' : ''} />
+                                  </button>
+                                </td>
+                                <td className="px-4 py-3 font-mono font-bold text-blue-700 text-xs whitespace-nowrap">
+                                  {code}
+                                </td>
+                                <td className="px-4 py-3 font-semibold text-gray-900 max-w-[200px] truncate">
+                                  {voucher.formData?.expenseTitle || 'Expense Voucher'}
+                                </td>
+                                <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                                  <span className="font-medium block">{voucher.formData?.name || '—'}</span>
+                                  <span className="text-xs text-gray-400 block">{voucher.formData?.title || ''}</span>
+                                </td>
+                                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                                  {voucher.formData?.location || '—'}
+                                </td>
+                                <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                                  {voucher.formData?.date ? new Date(voucher.formData.date).toLocaleDateString() : '—'}
+                                </td>
+                                <td className="px-4 py-3 text-center whitespace-nowrap">
+                                  <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                    {itemsCount}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right font-black text-blue-700 whitespace-nowrap">
+                                  {totalAmount} AED
+                                </td>
+                                <td className="px-4 py-3 text-center whitespace-nowrap">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => navigate(`/voucher/${voucher.id}`)}
+                                      className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-semibold transition-colors"
+                                    >
+                                      Open
+                                    </button>
+                                    <button
+                                      onClick={(e) => handleDeleteVoucher(e, voucher.id)}
+                                      className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. COMPACT LIST VIEW */}
+                {viewMode === 'compact' && (
+                  <div className="bg-white rounded-xl shadow-md border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                    {groupItems.map(voucher => {
+                      const code = voucher.voucherCode || formatVoucherCode(voucher.id)
+                      const totalAmount = calculateExpensesTotal(voucher.expenses)
+                      const itemsCount = voucher.expenses?.length || 0
+
+                      return (
+                        <div
+                          key={voucher.id}
+                          onClick={() => navigate(`/voucher/${voucher.id}`)}
+                          className="flex items-center justify-between p-3 hover:bg-blue-50/50 cursor-pointer transition-all gap-4 text-sm"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             <button
                               onClick={(e) => handleToggleFavourite(e, voucher.id)}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                voucher.isFavourite 
-                                  ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' 
-                                  : 'text-gray-300 hover:text-amber-400 hover:bg-gray-100'
-                              }`}
-                              title={voucher.isFavourite ? 'Remove from Favourites' : 'Mark as Favourite'}
+                              className="text-gray-300 hover:text-amber-500 shrink-0"
                             >
-                              <Star size={18} className={voucher.isFavourite ? 'fill-amber-500' : ''} />
+                              <Star size={16} className={voucher.isFavourite ? 'fill-amber-500 text-amber-500' : ''} />
                             </button>
+                            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 shrink-0">
+                              {code}
+                            </span>
+                            <span className="font-semibold text-gray-900 truncate">
+                              {voucher.formData?.expenseTitle || 'Expense Voucher'}
+                            </span>
+                            <span className="text-xs text-gray-400 hidden md:inline truncate">
+                              • {voucher.formData?.name || 'No employee'} ({voucher.formData?.location || 'No location'})
+                            </span>
+                          </div>
 
-                            {/* Delete Button */}
+                          <div className="flex items-center gap-4 shrink-0">
+                            <span className="text-xs text-gray-500 hidden sm:inline">
+                              {itemsCount} items
+                            </span>
+                            <span className="font-bold text-blue-700 text-sm">
+                              {totalAmount} AED
+                            </span>
                             <button
                               onClick={(e) => handleDeleteVoucher(e, voucher.id)}
-                              className="text-gray-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                              title="Delete Voucher"
+                              className="text-gray-300 hover:text-red-600 p-1 rounded"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </div>
+                      )
+                    })}
+                  </div>
+                )}
 
-                        {/* Card Meta details */}
-                        <div className="mb-4 space-y-1.5 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <User size={15} className="text-gray-400 shrink-0" />
-                            <span className="truncate">
-                              {voucher.formData?.name ? (
-                                <span className="font-semibold text-gray-800">{voucher.formData.name}</span>
-                              ) : (
-                                <span className="italic text-gray-400">Employee not specified</span>
-                              )}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <MapPin size={15} className="text-gray-400 shrink-0" />
-                            <span className="truncate">
-                              {voucher.formData?.location ? (
-                                <span className="font-medium text-gray-700">{voucher.formData.location}</span>
-                              ) : (
-                                <span className="italic text-gray-400">Location not specified</span>
-                              )}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Calendar size={15} className="text-gray-400 shrink-0" />
-                            <span className="text-xs text-gray-500">
-                              {voucher.formData?.date
-                                ? new Date(voucher.formData.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : 'No date set'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Card Footer: Items & Total AED */}
-                        <div className="border-t border-gray-100 pt-3 flex justify-between items-center text-sm">
-                          <span className="text-xs font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded">
-                            {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
-                          </span>
-                          <span className="font-black text-blue-700 text-lg">
-                            {totalAmount} <span className="text-xs font-bold text-gray-500">AED</span>
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
               </div>
             ))}
           </div>
