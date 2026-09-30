@@ -130,6 +130,23 @@ Modify the initial state in `App.jsx` to pre-populate the form with default valu
 - Safari (latest)
 - Mobile browsers (iOS Safari, Chrome Mobile)
 
+## Supabase Backend & Cloud Persistence
+
+SmartPettyCash supports a hybrid backend architecture with seamless **LocalStorage Fallback**:
+
+1. **Without Supabase**: The app runs offline/locally using browser `localStorage` seamlessly.
+2. **With Supabase**: Real-time cloud persistence, team-wide multi-user sync, and cloud image hosting for receipts.
+
+### Setup Instructions
+1. Create a Supabase project at [supabase.com](https://supabase.com).
+2. Run the SQL script located in [`supabase/schema.sql`](supabase/schema.sql) in your Supabase SQL Editor.
+3. Copy your project credentials into `.env.local`:
+   ```bash
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
+4. Restart your Vite dev server (`npm run dev`). The portal will automatically detect Supabase and migrate any existing local vouchers to the cloud!
+
 ## License
 
 This project is proprietary to MANLIFT.

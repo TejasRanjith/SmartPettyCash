@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Download, Send, ScanLine, Home, Sun, Moon } from 'lucide-react'
+import { Plus, Download, Send, ScanLine, Home, Sun, Moon, Cloud, Database } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import ExpenseForm from './ExpenseForm'
@@ -10,42 +10,27 @@ import Toast from './Toast'
 import ReceiptScanner from './ReceiptScanner'
 import { formatVoucherCode } from '../utils/voucherUtils'
 import { useTheme } from '../context/ThemeContext'
-
-const VOUCHERS_KEY = 'smart-petty-cash-vouchers'
-
-const loadVoucherFromStorage = (id) => {
-  try {
-    const saved = localStorage.getItem(VOUCHERS_KEY)
-    if (saved) {
-      const vouchers = JSON.parse(saved)
-      const found = vouchers.find(v => v.id === parseInt(id))
-      if (found) return found
-    }
-  } catch (e) {
-    console.error('Failed to load voucher:', e)
-  }
-  return null
-}
+import { voucherService } from '../services/voucherService'
 
 export default function VoucherDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { theme, toggleTheme, isDark } = useTheme()
 
-  const getVoucher = useCallback(() => {
-    if (id) {
-      return loadVoucherFromStorage(id)
-    }
-    return null
-  }, [id])
-
   const [voucherCode, setVoucherCode] = useState(() => {
-    const voucher = getVoucher()
-    return voucher?.voucherCode || formatVoucherCode(id || Date.now())
+    const voucher = voucherService.getLocalVoucherById(id)
+    if (voucher?.voucherCode) return voucher.voucherCode
+    if (String(id).startsWith('exp_voucher_')) return id
+    return ''
+  })
+
+  const [isFavourite, setIsFavourite] = useState(() => {
+    const voucher = voucherService.getLocalVoucherById(id)
+    return Boolean(voucher?.isFavourite)
   })
 
   const [formData, setFormData] = useState(() => {
-    const voucher = getVoucher()
+    const voucher = voucherService.getLocalVoucherById(id)
     return voucher?.formData || {
       name: '',
       date: new Date().toISOString().split('T')[0],
@@ -56,7 +41,7 @@ export default function VoucherDetail() {
   })
 
   const [expenses, setExpenses] = useState(() => {
-    const voucher = getVoucher()
+    const voucher = voucherService.getLocalVoucherById(id)
     return voucher?.expenses || []
   })
 
@@ -65,46 +50,57 @@ export default function VoucherDetail() {
   const [isExporting, setIsExporting] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
 
-  // Reload state if ID changes
-  useEffect(() => {
-    const voucher = getVoucher()
-    if (voucher) {
-      setVoucherCode(voucher.voucherCode || formatVoucherCode(voucher.id || id))
-      setFormData(voucher.formData || {
-        name: '',
-        date: new Date().toISOString().split('T')[0],
-        location: '',
-        title: '',
-        expenseTitle: ''
-      })
-      setExpenses(voucher.expenses || [])
-    }
-  }, [id, getVoucher])
+  // Guard to ensure auto-save does NOT overwrite existing cloud data before initial load completes
+  const isInitialLoaded = useRef(Boolean(voucherService.getLocalVoucherById(id)))
 
-  // Persist voucher changes to localStorage
+  // Reload / sync voucher from voucherService if ID changes or on mount
   useEffect(() => {
     if (!id) return
-    try {
-      const saved = localStorage.getItem(VOUCHERS_KEY)
-      const vouchers = saved ? JSON.parse(saved) : []
-      const currentCode = voucherCode || formatVoucherCode(id)
-      const exists = vouchers.some(v => v.id === parseInt(id))
-      
-      let updatedVouchers
-      if (exists) {
-        updatedVouchers = vouchers.map(v => 
-          v.id === parseInt(id) ? { ...v, voucherCode: v.voucherCode || currentCode, formData, expenses } : v
-        )
-      } else {
-        updatedVouchers = [...vouchers, { id: parseInt(id), voucherCode: currentCode, isFavourite: false, formData, expenses }]
-      }
+    let isMounted = true
 
-      localStorage.setItem(VOUCHERS_KEY, JSON.stringify(updatedVouchers))
-      console.log(`💾 Voucher #${id} (${currentCode}) autosaved to LocalStorage`)
-    } catch (e) {
-      console.error('Failed to persist voucher:', e)
+    async function fetchVoucher() {
+      try {
+        const voucher = await voucherService.getVoucherById(id)
+        if (voucher && isMounted) {
+          setVoucherCode(voucher.voucherCode || (String(voucher.id).startsWith('exp_voucher_') ? voucher.id : formatVoucherCode(Date.now())))
+          setIsFavourite(Boolean(voucher.isFavourite))
+          setFormData(voucher.formData || {
+            name: '',
+            date: new Date().toISOString().split('T')[0],
+            location: '',
+            title: '',
+            expenseTitle: ''
+          })
+          setExpenses(voucher.expenses || [])
+        } else if (isMounted && !voucherCode) {
+          setVoucherCode(String(id).startsWith('exp_voucher_') ? id : formatVoucherCode(Date.now()))
+        }
+      } catch (err) {
+        console.warn('Failed to load voucher:', err)
+      } finally {
+        if (isMounted) {
+          setTimeout(() => {
+            if (isMounted) isInitialLoaded.current = true
+          }, 50)
+        }
+      }
     }
-  }, [formData, expenses, id, voucherCode])
+
+    fetchVoucher()
+    return () => { isMounted = false }
+  }, [id])
+
+  // Persist voucher changes (instant to LocalStorage, debounced to Supabase)
+  useEffect(() => {
+    if (!id || !isInitialLoaded.current) return
+    const currentCode = voucherCode || (String(id).startsWith('exp_voucher_') ? id : formatVoucherCode(Date.now()))
+    voucherService.updateVoucher(id, {
+      voucherCode: currentCode,
+      isFavourite,
+      formData,
+      expenses
+    })
+  }, [formData, expenses, id, voucherCode, isFavourite])
 
   // Dynamic preview scale to fit the 1200px-wide document on any screen
   const [previewScale, setPreviewScale] = useState(1)
@@ -396,9 +392,18 @@ export default function VoucherDetail() {
     return true
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      showToast({ message: 'Expense form submitted successfully!', type: 'success' })
+      if (id) {
+        const currentCode = voucherCode || (String(id).startsWith('exp_voucher_') ? id : formatVoucherCode(Date.now()))
+        await voucherService.updateVoucher(id, {
+          voucherCode: currentCode,
+          isFavourite,
+          formData,
+          expenses
+        }, { immediate: true })
+      }
+      showToast({ message: 'Expense form saved & submitted successfully!', type: 'success' })
     }
   }
 
@@ -588,6 +593,17 @@ export default function VoucherDetail() {
             <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-slate-800 px-2.5 py-1.5 rounded border border-blue-200 dark:border-slate-700 ml-1">
               {voucherCode || formatVoucherCode(id || Date.now())}
             </span>
+            {voucherService.isCloudEnabled() ? (
+              <span className="hidden sm:inline-flex items-center gap-1 font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800" title="Auto-saving to Supabase Cloud">
+                <Cloud size={13} className="text-emerald-500" />
+                Cloud
+              </span>
+            ) : (
+              <span className="hidden sm:inline-flex items-center gap-1 font-mono text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700" title="Auto-saving to LocalStorage">
+                <Database size={13} className="text-slate-400" />
+                Local
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -696,6 +712,7 @@ export default function VoucherDetail() {
       {/* Receipt Scanner Modal */}
       {showScanner && (
         <ReceiptScanner
+          voucherCode={voucherCode}
           onScanComplete={handleScanComplete}
           onClose={() => setShowScanner(false)}
         />
@@ -859,6 +876,7 @@ function PDFDocument({ formData, expenses, total, pages, isExport = false }) {
             <div className="flex justify-center items-center border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50" style={{ height: '1300px' }}>
               <img
                 src={expense.receiptImage}
+                crossOrigin="anonymous"
                 alt={`Receipt #${expense.receiptNo}`}
                 className="max-w-full max-h-full object-contain rounded-lg shadow-md"
               />

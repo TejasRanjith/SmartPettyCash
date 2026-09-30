@@ -19,19 +19,26 @@ import {
   AlignJustify,
   ArrowRight,
   Sun,
-  Moon
+  Moon,
+  Cloud,
+  Database,
+  RefreshCw
 } from 'lucide-react'
 import { formatVoucherCode, calculateExpensesTotal } from '../utils/voucherUtils'
 import { useTheme } from '../context/ThemeContext'
+import { voucherService } from '../services/voucherService'
 
-const VOUCHERS_KEY = 'smart-petty-cash-vouchers'
-const LEGACY_SAVE_KEY = 'smart-petty-cash-data'
 const VIEW_MODE_KEY = 'smart-petty-cash-view-mode'
 
 export default function VoucherPortal() {
   const navigate = useNavigate()
   const { theme, toggleTheme, isDark } = useTheme()
   const [vouchers, setVouchers] = useState([])
+  const [syncState, setSyncState] = useState({
+    isCloud: voucherService.isCloudEnabled(),
+    syncing: false,
+    label: voucherService.isCloudEnabled() ? 'Supabase Cloud' : 'Local Storage Mode'
+  })
   
   // Search, Filter, Sort, Group & View Mode states
   const [searchQuery, setSearchQuery] = useState('')
@@ -53,58 +60,61 @@ export default function VoucherPortal() {
     }
   }
 
-  // Load vouchers & migrate legacy data
+  // Load vouchers from voucherService & auto-migrate un-synced local data to Supabase if configured
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(VOUCHERS_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        // Ensure every voucher has a standardized voucherCode and isFavourite flag
-        const normalized = parsed.map(v => ({
-          ...v,
-          voucherCode: v.voucherCode || formatVoucherCode(v.id || v.formData?.date || Date.now()),
-          isFavourite: !!v.isFavourite
-        }))
-        setVouchers(normalized)
-      } else {
-        // Check for legacy single-voucher session and migrate
-        const legacy = localStorage.getItem(LEGACY_SAVE_KEY)
-        if (legacy) {
-          const parsedLegacy = JSON.parse(legacy)
-          if (parsedLegacy.formData || parsedLegacy.expenses?.length > 0) {
-            const timestamp = Date.now()
-            const initialVoucher = {
-              id: timestamp,
-              voucherCode: formatVoucherCode(timestamp),
-              isFavourite: false,
-              formData: parsedLegacy.formData || {
-                name: '',
-                date: new Date().toISOString().split('T')[0],
-                location: '',
-                title: '',
-                expenseTitle: ''
-              },
-              expenses: parsedLegacy.expenses || []
-            }
-            const initialList = [initialVoucher]
-            localStorage.setItem(VOUCHERS_KEY, JSON.stringify(initialList))
-            setVouchers(initialList)
-          }
+    let isMounted = true
+
+    async function loadData() {
+      if (voucherService.isCloudEnabled()) {
+        setSyncState(prev => ({ ...prev, syncing: true }))
+        try {
+          await voucherService.migrateLocalStorageToSupabase()
+        } catch (e) {
+          console.warn('Auto migration error:', e)
         }
       }
-    } catch (e) {
-      console.error('Failed to load vouchers:', e)
+
+      const { data, source } = await voucherService.getAllVouchers()
+      if (isMounted) {
+        setVouchers(data)
+        setSyncState({
+          isCloud: source === 'supabase',
+          syncing: false,
+          label: source === 'supabase' ? 'Supabase Cloud Synced' : 'Local Storage Mode'
+        })
+      }
     }
+
+    loadData()
+    return () => { isMounted = false }
   }, [])
 
+  // Manual sync trigger
+  const handleManualSync = async () => {
+    if (!voucherService.isCloudEnabled()) return
+    setSyncState(prev => ({ ...prev, syncing: true }))
+    try {
+      await voucherService.migrateLocalStorageToSupabase()
+      const { data, source } = await voucherService.getAllVouchers()
+      setVouchers(data)
+      setSyncState({
+        isCloud: source === 'supabase',
+        syncing: false,
+        label: 'Supabase Cloud Synced'
+      })
+    } catch (e) {
+      console.warn('Sync failed:', e)
+      setSyncState(prev => ({ ...prev, syncing: false }))
+    }
+  }
+
   // Create new voucher with standardized naming convention
-  const handleCreateVoucher = () => {
+  const handleCreateVoucher = async () => {
     try {
       const timestamp = Date.now()
       const voucherCode = formatVoucherCode(timestamp)
-      const newVoucher = {
-        id: timestamp,
-        voucherCode: voucherCode,
+      const newVoucher = await voucherService.createVoucher({
+        voucherCode,
         isFavourite: false,
         formData: {
           name: '',
@@ -114,35 +124,33 @@ export default function VoucherPortal() {
           expenseTitle: ''
         },
         expenses: []
-      }
-      const updated = [newVoucher, ...vouchers]
-      localStorage.setItem(VOUCHERS_KEY, JSON.stringify(updated))
-      setVouchers(updated)
-      navigate(`/voucher/${newVoucher.id}`)
+      })
+      setVouchers(prev => [newVoucher, ...prev])
+      navigate(`/voucher/${newVoucher.voucherCode || newVoucher.id}`)
     } catch (e) {
       console.error('Failed to create voucher:', e)
     }
   }
 
   // Toggle Favourite Status
-  const handleToggleFavourite = (e, voucherId) => {
+  const handleToggleFavourite = async (e, voucherId) => {
     e.stopPropagation()
-    const updated = vouchers.map(v => 
-      v.id === voucherId ? { ...v, isFavourite: !v.isFavourite } : v
-    )
-    localStorage.setItem(VOUCHERS_KEY, JSON.stringify(updated))
-    setVouchers(updated)
+    const target = vouchers.find(v => v.id === voucherId || v.voucherCode === voucherId)
+    const currentFav = Boolean(target?.isFavourite)
+    setVouchers(prev => prev.map(v => 
+      (v.id === voucherId || v.voucherCode === voucherId) ? { ...v, isFavourite: !currentFav } : v
+    ))
+    await voucherService.toggleFavourite(voucherId, currentFav)
   }
 
   // Delete Voucher
-  const handleDeleteVoucher = (e, voucherId) => {
+  const handleDeleteVoucher = async (e, voucherId) => {
     e.stopPropagation()
-    const target = vouchers.find(v => v.id === voucherId)
+    const target = vouchers.find(v => v.id === voucherId || v.voucherCode === voucherId)
     const codeName = target?.voucherCode || `Voucher #${voucherId}`
     if (window.confirm(`Are you sure you want to delete ${codeName}?`)) {
-      const updated = vouchers.filter(v => v.id !== voucherId)
-      localStorage.setItem(VOUCHERS_KEY, JSON.stringify(updated))
-      setVouchers(updated)
+      setVouchers(prev => prev.filter(v => v.id !== voucherId && v.voucherCode !== voucherId))
+      await voucherService.deleteVoucher(voucherId)
     }
   }
 
@@ -330,8 +338,29 @@ export default function VoucherPortal() {
               )}
             </div>
 
-            {/* Action Buttons: Dark Mode Toggle + New Voucher Primary Button */}
+            {/* Action Buttons: Sync Indicator + Dark Mode Toggle + New Voucher Primary Button */}
             <div className="flex items-center gap-2 shrink-0">
+              {syncState.isCloud ? (
+                <button
+                  onClick={handleManualSync}
+                  disabled={syncState.syncing}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-semibold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-sm"
+                  title="Supabase Cloud Database & Storage Active. Click to re-sync."
+                >
+                  <Cloud size={15} className={`text-emerald-600 dark:text-emerald-400 ${syncState.syncing ? 'animate-pulse' : ''}`} />
+                  <span className="hidden sm:inline">{syncState.syncing ? 'Syncing...' : 'Cloud Synced'}</span>
+                  <RefreshCw size={12} className={`text-emerald-500 ${syncState.syncing ? 'animate-spin' : ''}`} />
+                </button>
+              ) : (
+                <div 
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 shadow-sm"
+                  title="Running in LocalStorage fallback mode. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local to enable multi-user cloud backend."
+                >
+                  <Database size={14} className="text-slate-500 dark:text-slate-400" />
+                  <span className="hidden sm:inline">Local Storage</span>
+                </div>
+              )}
+
               <button
                 onClick={toggleTheme}
                 className="p-2.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border border-gray-200 dark:border-slate-700 shadow-sm"
@@ -524,7 +553,7 @@ export default function VoucherPortal() {
                       return (
                         <div
                           key={voucher.id}
-                          onClick={() => navigate(`/voucher/${voucher.id}`)}
+                          onClick={() => navigate(`/voucher/${voucher.voucherCode || voucher.id}`)}
                           className={`bg-white dark:bg-slate-900 rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
                             voucher.isFavourite 
                               ? 'border-amber-300 dark:border-amber-600/70 ring-1 ring-amber-200 dark:ring-amber-900/30' 
@@ -627,7 +656,7 @@ export default function VoucherPortal() {
                       return (
                         <div
                           key={voucher.id}
-                          onClick={() => navigate(`/voucher/${voucher.id}`)}
+                          onClick={() => navigate(`/voucher/${voucher.voucherCode || voucher.id}`)}
                           className={`bg-white dark:bg-slate-900 rounded-2xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
                             voucher.isFavourite 
                               ? 'border-amber-300 dark:border-amber-600/70 ring-2 ring-amber-100 dark:ring-amber-900/30' 
@@ -768,7 +797,7 @@ export default function VoucherPortal() {
                             return (
                               <tr 
                                 key={voucher.id}
-                                onClick={() => navigate(`/voucher/${voucher.id}`)}
+                                onClick={() => navigate(`/voucher/${voucher.voucherCode || voucher.id}`)}
                                 className={`hover:bg-blue-50/50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors ${
                                   voucher.isFavourite ? 'bg-amber-50/20 dark:bg-amber-950/20' : ''
                                 }`}
@@ -808,7 +837,7 @@ export default function VoucherPortal() {
                                 <td className="px-4 py-3 text-center whitespace-nowrap">
                                   <div className="flex items-center justify-center gap-1">
                                     <button
-                                      onClick={() => navigate(`/voucher/${voucher.id}`)}
+                                      onClick={() => navigate(`/voucher/${voucher.voucherCode || voucher.id}`)}
                                       className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded text-xs font-semibold transition-colors"
                                     >
                                       Open
@@ -841,7 +870,7 @@ export default function VoucherPortal() {
                       return (
                         <div
                           key={voucher.id}
-                          onClick={() => navigate(`/voucher/${voucher.id}`)}
+                          onClick={() => navigate(`/voucher/${voucher.voucherCode || voucher.id}`)}
                           className="flex items-center justify-between p-3 hover:bg-blue-50/50 dark:hover:bg-slate-800/60 cursor-pointer transition-all gap-4 text-sm"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">

@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Camera, Upload, X, ScanLine, Loader2, Settings, Key } from 'lucide-react';
 import { getApiKey, setApiKey, scanReceipt } from '../utils/ocrService';
+import { voucherService } from '../services/voucherService';
 
 /**
  * ReceiptScanner component — captures receipt images via camera or file upload,
  * runs OCR via OCR.space API, and returns parsed data.
  */
-export default function ReceiptScanner({ onScanComplete, onClose }) {
+export default function ReceiptScanner({ onScanComplete, onClose, voucherCode }) {
   const [mode, setMode] = useState(null); // 'camera' | 'upload' | null
   const [image, setImage] = useState(null); // Selected/captured image preview URL
   const [imageFile, setImageFile] = useState(null); // Raw file for OCR
@@ -105,22 +106,40 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
         }
       });
 
-      // Convert imageFile to Base64 and pass it along with parsed data
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Data = reader.result;
+      // Try uploading image to Supabase Storage if configured; fall back to Base64
+      let receiptImageUrl = null;
+      if (voucherService.isCloudEnabled()) {
+        try {
+          receiptImageUrl = await voucherService.uploadReceiptImage(imageFile, voucherCode);
+        } catch (uploadErr) {
+          console.warn('Storage upload fallback:', uploadErr);
+        }
+      }
+
+      if (receiptImageUrl) {
         onScanComplete({
           ...parsedData,
-          receiptImage: base64Data
+          receiptImage: receiptImageUrl
         });
         cleanup();
-      };
-      reader.onerror = (error) => {
-        console.error('FileReader error:', error);
-        alert('Failed to read image for PDF embedding. Please try again.');
-        cleanup();
-      };
-      reader.readAsDataURL(imageFile);
+      } else {
+        // Fallback: Convert imageFile to Base64 and pass it along with parsed data
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Data = reader.result;
+          onScanComplete({
+            ...parsedData,
+            receiptImage: base64Data
+          });
+          cleanup();
+        };
+        reader.onerror = (error) => {
+          console.error('FileReader error:', error);
+          alert('Failed to read image for PDF embedding. Please try again.');
+          cleanup();
+        };
+        reader.readAsDataURL(imageFile);
+      }
     } catch (err) {
       console.error('Scan failed:', err);
       alert(err.message || 'Failed to scan receipt. Please try again.');
