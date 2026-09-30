@@ -8,6 +8,7 @@ import ExpenseTable from './ExpenseTable'
 import Header from './Header'
 import Toast from './Toast'
 import ReceiptScanner from './ReceiptScanner'
+import { formatVoucherCode } from '../utils/voucherUtils'
 
 const VOUCHERS_KEY = 'smart-petty-cash-vouchers'
 
@@ -438,8 +439,9 @@ export default function VoucherDetail() {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
       }
 
-      pdf.save(`expense_voucher_${id || formData.date || 'report'}.pdf`);
-      showToast({ message: 'PDF downloaded successfully with perfect alignment!', type: 'success' });
+      const pdfFileName = `${formatVoucherCode(new Date())}.pdf`;
+      pdf.save(pdfFileName);
+      showToast({ message: `Exported ${pdfFileName} successfully!`, type: 'success' });
     } catch (error) {
       console.error('PDF generation failed:', error);
       showToast({ message: 'Failed to generate PDF. Please try again.', type: 'error' })
@@ -543,35 +545,39 @@ export default function VoucherDetail() {
 
       <div className="max-w-7xl mx-auto">
         {/* Control Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6 justify-between items-center">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-3 mb-6 justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 font-medium shadow-md"
+              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 font-medium shadow-sm text-sm"
             >
-              <Home size={18} />
+              <Home size={16} />
               Home
             </button>
+            <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
             <button
               onClick={() => setViewMode('form')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                 viewMode === 'form'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Edit
             </button>
             <button
               onClick={() => setViewMode('preview')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                 viewMode === 'preview'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Preview
             </button>
+            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded border border-blue-200 ml-1">
+              {formatVoucherCode(id || Date.now())}
+            </span>
           </div>
 
           <div className="flex gap-2">

@@ -28,6 +28,40 @@ export function setApiKey(key) {
 }
 
 /**
+ * Helper to fetch with exponential backoff on 503 / 429 status codes.
+ */
+async function fetchWithRetry(url, options, maxRetries = 2, baseDelay = 1500) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      // If 503 Service Unavailable or 429 Too Many Requests, wait and retry
+      if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
+        const retryAfter = response.headers.get('Retry-After');
+        const waitMs = retryAfter 
+          ? parseInt(retryAfter, 10) * 1000 
+          : baseDelay * Math.pow(2, attempt) + Math.random() * 500;
+          
+        console.warn(`[OCR.space] Status ${response.status} encountered. Retrying in ${Math.round(waitMs)}ms (attempt ${attempt + 1}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        continue;
+      }
+      return response;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        const waitMs = baseDelay * Math.pow(2, attempt) + Math.random() * 500;
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError || new Error('Request failed after retries');
+}
+
+/**
  * Scan receipt image using OCR.space API.
  * Uses OCR Engine 2 which is optimized for receipts, fast speed, and numbers.
  * @param {File|Blob} imageFile - The image to process
@@ -46,7 +80,6 @@ export async function scanReceipt(imageFile, options = {}) {
     formData.append('file', imageFile);
     formData.append('apikey', apiKey);
     formData.append('language', 'eng');
-    // Engine 2 is optimized for receipts, tabular data, and numbers
     formData.append('ocrEngine', '2'); 
     formData.append('isTable', 'true');
     formData.append('scale', 'true');
@@ -54,9 +87,9 @@ export async function scanReceipt(imageFile, options = {}) {
     if (onProgress) onProgress(40);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s timeout
 
-    const response = await fetch(OCR_SPACE_ENDPOINT, {
+    const response = await fetchWithRetry(OCR_SPACE_ENDPOINT, {
       method: 'POST',
       body: formData,
       signal: controller.signal
@@ -67,6 +100,9 @@ export async function scanReceipt(imageFile, options = {}) {
     if (onProgress) onProgress(70);
 
     if (!response.ok) {
+      if (response.status === 503) {
+        throw new Error('OCR.space service is temporarily busy (HTTP 503). Please wait a few seconds, or add your free personal API key in OCR Settings.');
+      }
       throw new Error(`OCR.space API error: Status ${response.status}`);
     }
 
@@ -95,7 +131,7 @@ export async function scanReceipt(imageFile, options = {}) {
     return {
       ...parsedData,
       rawText,
-      confidence: 1.0, // OCR.space doesn't provide easy confidence score in this format
+      confidence: 1.0,
       engine: 'ocr_space'
     };
   } catch (error) {
