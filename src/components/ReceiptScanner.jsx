@@ -139,12 +139,12 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
   }, [cleanup]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-slate-800 text-gray-900 dark:text-slate-100">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <ScanLine size={20} className="text-blue-600" />
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-800">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <ScanLine size={20} className="text-blue-600 dark:text-blue-400" />
             Scan Receipt
           </h3>
           <div className="flex items-center gap-1">
@@ -152,14 +152,14 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
               onClick={() => setShowSettings(!showSettings)}
               disabled={scanning}
               title="OCR Settings"
-              className="p-2 hover:bg-gray-100 text-gray-600 rounded-full transition-colors disabled:opacity-50"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-slate-300 rounded-full transition-colors disabled:opacity-50"
             >
               <Settings size={20} />
             </button>
             <button
               onClick={handleClose}
               disabled={scanning}
-              className="p-2 hover:bg-gray-100 text-gray-600 rounded-full transition-colors disabled:opacity-50"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-slate-300 rounded-full transition-colors disabled:opacity-50"
             >
               <X size={20} />
             </button>
@@ -168,33 +168,33 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
 
         {/* Settings Panel Overlay */}
         {showSettings && (
-          <div className="p-4 border-b border-gray-200 bg-blue-50/50 animate-fade-in">
-            <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2 mb-2">
-              <Key size={16} className="text-blue-600" />
+          <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-blue-50/50 dark:bg-slate-800/80 animate-fade-in">
+            <h4 className="text-sm font-bold text-gray-700 dark:text-slate-200 flex items-center gap-2 mb-2">
+              <Key size={16} className="text-blue-600 dark:text-blue-400" />
               OCR.space Configuration
             </h4>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">OCR.space API Key</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1">OCR.space API Key</label>
                 <div className="flex gap-2">
                   <input
                     type="password"
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
                     placeholder="Enter your API Key"
-                    className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 p-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {apiKeyInput !== 'helloworld' && (
                     <button
                       onClick={() => setApiKeyInput('helloworld')}
-                      className="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                      className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
                     >
                       Use Demo Key
                     </button>
                   )}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  Default is 'helloworld' (shared rate-limited demo). Get a free personal key instantly at <a href="https://ocr.space/ocrapi" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">ocr.space/ocrapi</a>.
+                <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">
+                  Default is 'helloworld' (shared rate-limited demo). Get a free personal key instantly at <a href="https://ocr.space/ocrapi" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">ocr.space/ocrapi</a>.
                 </p>
               </div>
               <div className="flex justify-end gap-2">
@@ -203,7 +203,7 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
                     setApiKeyInput(getApiKey());
                     setShowSettings(false);
                   }}
-                  className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-md font-medium"
+                  className="px-3 py-1.5 text-xs text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md font-medium"
                 >
                   Cancel
                 </button>
@@ -223,35 +223,35 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
           {/* Mode Selection (if no image selected yet) */}
           {!mode && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-500 text-center mb-4">
+              <p className="text-sm text-gray-500 dark:text-slate-400 text-center mb-4">
                 Take a photo or upload a receipt image to automatically extract expense details.
               </p>
 
               <button
                 onClick={startCamera}
-                className="w-full flex items-center justify-center gap-3 p-6 border-2 border-dashed border-blue-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                className="w-full flex items-center justify-center gap-3 p-6 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all group"
               >
-                <Camera size={32} className="text-blue-500 group-hover:text-blue-700" />
+                <Camera size={32} className="text-blue-500 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300" />
                 <div className="text-left">
-                  <p className="font-semibold text-gray-800 group-hover:text-blue-700">Take a Photo</p>
-                  <p className="text-sm text-gray-500">Use your device camera</p>
+                  <p className="font-semibold text-gray-800 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-300">Take a Photo</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">Use your device camera</p>
                 </div>
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-sm text-gray-400 font-medium">OR</span>
-                <div className="flex-1 h-px bg-gray-200" />
+                <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
+                <span className="text-sm text-gray-400 dark:text-slate-500 font-medium">OR</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
               </div>
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-gray-500 hover:bg-gray-50 transition-all group"
+                className="w-full flex items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl hover:border-gray-500 dark:hover:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all group"
               >
-                <Upload size={32} className="text-gray-500 group-hover:text-gray-700" />
+                <Upload size={32} className="text-gray-500 dark:text-slate-400 group-hover:text-gray-700 dark:group-hover:text-slate-200" />
                 <div className="text-left">
-                  <p className="font-semibold text-gray-800 group-hover:text-gray-700">Upload Image</p>
-                  <p className="text-sm text-gray-500">Choose a receipt photo from your device</p>
+                  <p className="font-semibold text-gray-800 dark:text-slate-100 group-hover:text-gray-700 dark:group-hover:text-slate-200">Upload Image</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">Choose a receipt photo from your device</p>
                 </div>
               </button>
 
@@ -287,7 +287,7 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
                 </button>
                 <button
                   onClick={() => { stopCamera(); setMode(null); }}
-                  className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                  className="px-4 py-3 bg-gray-200 dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
@@ -298,7 +298,7 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
           {/* Image Preview */}
           {image && preview && (
             <div>
-              <div className="relative rounded-xl overflow-hidden bg-gray-100 mb-4">
+              <div className="relative rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-950 mb-4">
                 <img
                   src={preview}
                   alt="Receipt preview"
@@ -320,19 +320,19 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
               {scanning && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-slate-300 flex items-center gap-2">
                       <Loader2 size={16} className="animate-spin" />
                       Scanning receipt...
                     </span>
-                    <span className="text-sm font-bold text-blue-600">{progress}%</span>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{progress}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Extracting text from receipt image</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Extracting text from receipt image</p>
                 </div>
               )}
 
@@ -356,7 +356,7 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
                       if (mode === 'camera') startCamera();
                       else setMode(null);
                     }}
-                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                    className="px-4 py-3 bg-gray-200 dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
                   >
                     Retake
                   </button>
@@ -367,8 +367,8 @@ export default function ReceiptScanner({ onScanComplete, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
-          <p className="text-xs text-gray-400 text-center">
+        <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 rounded-b-2xl">
+          <p className="text-xs text-gray-400 dark:text-slate-500 text-center">
             OCR processing is powered by **OCR.space Engine 2** (specialized receipt layout analyzer) directly in your browser.
           </p>
         </div>

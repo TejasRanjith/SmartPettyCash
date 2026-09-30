@@ -13,18 +13,18 @@ function Toast({ message, type = 'success', onClose }) {
     <div className="fixed bottom-6 left-6 z-50 animate-slide-up">
       <div className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border-l-4 min-w-[300px] max-w-md ${
         type === 'success' 
-          ? 'bg-green-50 border-green-500 text-green-800' 
-          : 'bg-red-50 border-red-500 text-red-800'
+          ? 'bg-green-50 dark:bg-slate-900 border-green-500 text-green-800 dark:text-green-300 dark:border-green-500' 
+          : 'bg-red-50 dark:bg-slate-900 border-red-500 text-red-800 dark:text-red-300 dark:border-red-500'
       }`}>
         {type === 'success' ? (
-          <CheckCircle size={22} className="text-green-600 shrink-0" />
+          <CheckCircle size={22} className="text-green-600 dark:text-green-400 shrink-0" />
         ) : (
-          <AlertCircle size={22} className="text-red-600 shrink-0" />
+          <AlertCircle size={22} className="text-red-600 dark:text-red-400 shrink-0" />
         )}
         <p className="text-sm font-medium flex-1">{message}</p>
         <button
           onClick={onClose}
-          className="p-1 hover:bg-black/5 rounded-lg transition-colors shrink-0"
+          className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors shrink-0"
         >
           <X size={16} />
         </button>

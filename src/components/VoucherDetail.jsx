@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Download, Send, ScanLine, Home } from 'lucide-react'
+import { Plus, Download, Send, ScanLine, Home, Sun, Moon } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import ExpenseForm from './ExpenseForm'
@@ -9,6 +9,7 @@ import Header from './Header'
 import Toast from './Toast'
 import ReceiptScanner from './ReceiptScanner'
 import { formatVoucherCode } from '../utils/voucherUtils'
+import { useTheme } from '../context/ThemeContext'
 
 const VOUCHERS_KEY = 'smart-petty-cash-vouchers'
 
@@ -29,6 +30,7 @@ const loadVoucherFromStorage = (id) => {
 export default function VoucherDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { theme, toggleTheme, isDark } = useTheme()
 
   const getVoucher = useCallback(() => {
     if (id) {
@@ -459,7 +461,7 @@ export default function VoucherDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 md:px-8 lg:px-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-8 px-4 md:px-8 lg:px-12 text-gray-900 dark:text-slate-100 transition-colors duration-200">
       {/* Hidden offscreen measuring block */}
       <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: '0', pointerEvents: 'none', display: 'block' }}>
         <div ref={measureRef} style={{ width: '1200px', padding: '60px 80px', boxSizing: 'border-box', background: '#ffffff' }}>
@@ -553,22 +555,22 @@ export default function VoucherDetail() {
 
       <div className="max-w-7xl mx-auto">
         {/* Control Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6 justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-3 mb-6 justify-between items-center bg-white dark:bg-slate-900 p-3 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm transition-colors">
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 font-medium shadow-sm text-sm"
+              className="px-4 py-2 bg-gray-700 dark:bg-slate-800 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm text-sm border border-transparent dark:border-slate-700"
             >
               <Home size={16} />
               Home
             </button>
-            <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
+            <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
             <button
               onClick={() => setViewMode('form')}
               className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                 viewMode === 'form'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 border border-transparent dark:border-slate-700'
               }`}
             >
               Edit
@@ -578,17 +580,26 @@ export default function VoucherDetail() {
               className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                 viewMode === 'preview'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 border border-transparent dark:border-slate-700'
               }`}
             >
               Preview
             </button>
-            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded border border-blue-200 ml-1">
+            <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-slate-800 px-2.5 py-1.5 rounded border border-blue-200 dark:border-slate-700 ml-1">
               {voucherCode || formatVoucherCode(id || Date.now())}
             </span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {/* Dark/Light Mode Switcher */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border border-transparent dark:border-slate-700 shadow-sm"
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             <button
               onClick={handleSubmit}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-2 font-medium shadow-lg"
@@ -616,14 +627,14 @@ export default function VoucherDetail() {
           <div className="space-y-6 animate-fade-in">
             <Header />
 
-            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Expense Details</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 md:p-8 border border-gray-100 dark:border-slate-800 transition-colors">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Expense Details</h2>
               <ExpenseForm formData={formData} onFormChange={handleFormChange} />
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 md:p-8 border border-gray-100 dark:border-slate-800 transition-colors">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Expenses</h2>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Expenses</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowScanner(true)}
@@ -650,12 +661,12 @@ export default function VoucherDetail() {
                 />
               </div>
 
-              <div className="mt-6 pt-6 border-t-2 border-gray-200">
+              <div className="mt-6 pt-6 border-t-2 border-gray-200 dark:border-slate-800">
                 <div className="flex justify-between items-end">
                   <div className="flex-1" />
                   <div className="text-right ml-4">
-                    <p className="text-gray-600 font-medium mb-2">TOTAL</p>
-                    <p className="text-3xl font-bold text-blue-600">
+                    <p className="text-gray-600 dark:text-slate-400 font-medium mb-2">TOTAL</p>
+                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                       {calculateTotal()} AED
                     </p>
                   </div>
@@ -668,7 +679,7 @@ export default function VoucherDetail() {
         {/* Preview View */}
         {viewMode === 'preview' && (
           <div className="animate-fade-in flex flex-col items-center overflow-x-hidden w-full">
-            <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-800 px-6 py-3 rounded-lg text-sm font-semibold w-full text-center">
+            <div className="mb-4 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 px-6 py-3 rounded-lg text-sm font-semibold w-full text-center">
               📄 Document preview is formatted into separate page sheets. What you see is exactly what is exported in the PDF!
             </div>
             
@@ -709,7 +720,7 @@ function PDFDocument({ formData, expenses, total, pages, isExport = false }) {
   const totalPages = pages.length + receiptExpenses.length;
 
   return (
-    <div className={`flex flex-col gap-8 ${isExport ? '' : 'items-center bg-slate-200 py-8 rounded-3xl'}`}>
+    <div className={`flex flex-col gap-8 ${isExport ? '' : 'items-center bg-slate-200 dark:bg-slate-950 py-8 rounded-3xl'}`}>
       {pages.map((page, index) => (
         <div
           key={index}

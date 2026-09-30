@@ -27,8 +27,8 @@ function ExpenseForm({ formData, onFormChange }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Name <span className="text-xs text-gray-400 font-normal">(Text only)</span>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+          Name <span className="text-xs text-gray-400 dark:text-slate-500 font-normal">(Text only)</span>
         </label>
         <input
           type="text"
@@ -36,25 +36,25 @@ function ExpenseForm({ formData, onFormChange }) {
           value={formData.name}
           onChange={handleTextOnlyChange}
           onKeyDown={handleTextOnlyKeyDown}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all placeholder:text-gray-400 dark:placeholder:text-slate-500"
           placeholder="Enter employee name"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Date</label>
         <input
           type="date"
           name="date"
           value={formData.date}
           onChange={onFormChange}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Location <span className="text-xs text-gray-400 font-normal">(Text only)</span>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+          Location <span className="text-xs text-gray-400 dark:text-slate-500 font-normal">(Text only)</span>
         </label>
         <input
           type="text"
@@ -62,14 +62,14 @@ function ExpenseForm({ formData, onFormChange }) {
           value={formData.location}
           onChange={handleTextOnlyChange}
           onKeyDown={handleTextOnlyKeyDown}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all placeholder:text-gray-400 dark:placeholder:text-slate-500"
           placeholder="e.g., ABU DHABI"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Title / Position <span className="text-xs text-gray-400 font-normal">(Designation, text only)</span>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+          Title / Position <span className="text-xs text-gray-400 dark:text-slate-500 font-normal">(Designation, text only)</span>
         </label>
         <input
           type="text"
@@ -77,19 +77,19 @@ function ExpenseForm({ formData, onFormChange }) {
           value={formData.title}
           onChange={handleTextOnlyChange}
           onKeyDown={handleTextOnlyKeyDown}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all placeholder:text-gray-400 dark:placeholder:text-slate-500"
           placeholder="e.g., ACCOUNT MANAGER"
         />
       </div>
 
       <div className="md:col-span-2">
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Expense Title</label>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Expense Title</label>
         <input
           type="text"
           name="expenseTitle"
           value={formData.expenseTitle}
           onChange={onFormChange}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all placeholder:text-gray-400 dark:placeholder:text-slate-500"
           placeholder="e.g., May 2026 EXPENSES"
         />
       </div>

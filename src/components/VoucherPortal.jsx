@@ -18,10 +18,11 @@ import {
   List,
   AlignJustify,
   ArrowRight,
-  Briefcase,
-  FileText
+  Sun,
+  Moon
 } from 'lucide-react'
 import { formatVoucherCode, calculateExpensesTotal } from '../utils/voucherUtils'
+import { useTheme } from '../context/ThemeContext'
 
 const VOUCHERS_KEY = 'smart-petty-cash-vouchers'
 const LEGACY_SAVE_KEY = 'smart-petty-cash-data'
@@ -29,6 +30,7 @@ const VIEW_MODE_KEY = 'smart-petty-cash-view-mode'
 
 export default function VoucherPortal() {
   const navigate = useNavigate()
+  const { theme, toggleTheme, isDark } = useTheme()
   const [vouchers, setVouchers] = useState([])
   
   // Search, Filter, Sort, Group & View Mode states
@@ -246,7 +248,7 @@ export default function VoucherPortal() {
   }, [vouchers])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 md:px-8 lg:px-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-8 px-4 md:px-8 lg:px-12 text-gray-900 dark:text-slate-100 transition-colors duration-200">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header Banner */}
@@ -263,83 +265,93 @@ export default function VoucherPortal() {
 
         {/* Overview Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-colors">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-lg">
               <Receipt size={24} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total Vouchers</p>
-              <p className="text-2xl font-black text-gray-900">{stats.totalCount}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">Total Vouchers</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white">{stats.totalCount}</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-green-50 text-green-600 rounded-lg">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-colors">
+            <div className="p-3 bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-400 rounded-lg">
               <DollarSign size={24} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total Amount</p>
-              <p className="text-2xl font-black text-green-600">{stats.totalAmount} <span className="text-xs font-semibold text-gray-400">AED</span></p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">Total Amount</p>
+              <p className="text-2xl font-black text-green-600 dark:text-green-400">{stats.totalAmount} <span className="text-xs font-semibold text-gray-400 dark:text-slate-500">AED</span></p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-amber-50 text-amber-500 rounded-lg">
-              <Star size={24} className="fill-amber-500" />
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-colors">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-500 dark:text-amber-400 rounded-lg">
+              <Star size={24} className="fill-amber-500 dark:fill-amber-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Favourites</p>
-              <p className="text-2xl font-black text-amber-500">{stats.favouritesCount}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">Favourites</p>
+              <p className="text-2xl font-black text-amber-500 dark:text-amber-400">{stats.favouritesCount}</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-colors">
+            <div className="p-3 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-lg">
               <MapPin size={24} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Locations</p>
-              <p className="text-2xl font-black text-purple-600">{stats.uniqueLocations}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">Locations</p>
+              <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{stats.uniqueLocations}</p>
             </div>
           </div>
         </div>
 
-        {/* Controls Toolbar: Search, Sort, Group, Favourites, View Modes, New Voucher */}
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+        {/* Controls Toolbar: Search, Sort, Group, Favourites, View Modes, Dark Mode Toggle, New Voucher */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
           <div className="flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
             
             {/* Search Input */}
             <div className="relative flex-1">
-              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by code (e.g. exp_voucher_...), employee, location, or description..."
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white rounded-lg text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-all placeholder:text-gray-400 dark:placeholder:text-slate-500"
               />
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200"
                 >
                   Clear
                 </button>
               )}
             </div>
 
-            {/* New Voucher Primary Button */}
-            <button
-              onClick={handleCreateVoucher}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md shrink-0"
-            >
-              <Plus size={20} />
-              New Voucher
-            </button>
+            {/* Action Buttons: Dark Mode Toggle + New Voucher Primary Button */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border border-gray-200 dark:border-slate-700 shadow-sm"
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
+              <button
+                onClick={handleCreateVoucher}
+                className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md shrink-0"
+              >
+                <Plus size={20} />
+                New Voucher
+              </button>
+            </div>
           </div>
 
           {/* Filter, Sort, Group & View Mode Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-sm">
             
             <div className="flex flex-wrap items-center gap-2">
               {/* Favourites Only Toggle */}
@@ -347,61 +359,61 @@ export default function VoucherPortal() {
                 onClick={() => setFavouritesOnly(!favouritesOnly)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
                   favouritesOnly 
-                    ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-sm' 
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 border border-transparent dark:border-slate-700'
                 }`}
               >
-                <Star size={16} className={favouritesOnly ? 'fill-amber-500 text-amber-500' : 'text-gray-400'} />
+                <Star size={16} className={favouritesOnly ? 'fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400' : 'text-gray-400 dark:text-slate-500'} />
                 Favourites Only
               </button>
 
               {/* Sort By Dropdown */}
-              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
-                <ArrowUpDown size={15} className="text-gray-400" />
-                <span className="text-xs text-gray-500 font-medium">Sort:</span>
+              <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-3 py-1.5 rounded-lg">
+                <ArrowUpDown size={15} className="text-gray-400 dark:text-slate-500" />
+                <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">Sort:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer text-xs"
+                  className="bg-transparent font-medium text-gray-700 dark:text-slate-200 focus:outline-none cursor-pointer text-xs dark:bg-slate-800"
                 >
-                  <option value="date-desc">Date (Newest First)</option>
-                  <option value="date-asc">Date (Oldest First)</option>
-                  <option value="amount-desc">Amount (Highest First)</option>
-                  <option value="amount-asc">Amount (Lowest First)</option>
-                  <option value="items-desc">Item Count (Most First)</option>
-                  <option value="items-asc">Item Count (Fewest First)</option>
-                  <option value="name-asc">Code/Name (A–Z)</option>
-                  <option value="name-desc">Code/Name (Z–A)</option>
+                  <option value="date-desc" className="dark:bg-slate-800 dark:text-white">Date (Newest First)</option>
+                  <option value="date-asc" className="dark:bg-slate-800 dark:text-white">Date (Oldest First)</option>
+                  <option value="amount-desc" className="dark:bg-slate-800 dark:text-white">Amount (Highest First)</option>
+                  <option value="amount-asc" className="dark:bg-slate-800 dark:text-white">Amount (Lowest First)</option>
+                  <option value="items-desc" className="dark:bg-slate-800 dark:text-white">Item Count (Most First)</option>
+                  <option value="items-asc" className="dark:bg-slate-800 dark:text-white">Item Count (Fewest First)</option>
+                  <option value="name-asc" className="dark:bg-slate-800 dark:text-white">Code/Name (A–Z)</option>
+                  <option value="name-desc" className="dark:bg-slate-800 dark:text-white">Code/Name (Z–A)</option>
                 </select>
               </div>
 
               {/* Group By Dropdown */}
-              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
-                <Layers size={15} className="text-gray-400" />
-                <span className="text-xs text-gray-500 font-medium">Group:</span>
+              <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-3 py-1.5 rounded-lg">
+                <Layers size={15} className="text-gray-400 dark:text-slate-500" />
+                <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">Group:</span>
                 <select
                   value={groupBy}
                   onChange={(e) => setGroupBy(e.target.value)}
-                  className="bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer text-xs"
+                  className="bg-transparent font-medium text-gray-700 dark:text-slate-200 focus:outline-none cursor-pointer text-xs dark:bg-slate-800"
                 >
-                  <option value="none">None (Flat Grid)</option>
-                  <option value="location">By Location</option>
-                  <option value="month">By Month</option>
-                  <option value="employee">By Employee</option>
+                  <option value="none" className="dark:bg-slate-800 dark:text-white">None (Flat Grid)</option>
+                  <option value="location" className="dark:bg-slate-800 dark:text-white">By Location</option>
+                  <option value="month" className="dark:bg-slate-800 dark:text-white">By Month</option>
+                  <option value="employee" className="dark:bg-slate-800 dark:text-white">By Employee</option>
                 </select>
               </div>
             </div>
 
             {/* View Mode Switcher (Grid | Descriptive Grid | Detailed List | Compact List) */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 font-medium hidden sm:inline">View:</span>
-              <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+              <span className="text-xs text-gray-400 dark:text-slate-500 font-medium hidden sm:inline">View:</span>
+              <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700">
                 <button
                   onClick={() => handleViewModeChange('grid')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'grid' 
-                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
-                      : 'text-gray-500 hover:text-gray-800'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm font-semibold' 
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200'
                   }`}
                   title="Grid View"
                 >
@@ -411,8 +423,8 @@ export default function VoucherPortal() {
                   onClick={() => handleViewModeChange('descriptive')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'descriptive' 
-                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
-                      : 'text-gray-500 hover:text-gray-800'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm font-semibold' 
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200'
                   }`}
                   title="Descriptive Grid View"
                 >
@@ -422,8 +434,8 @@ export default function VoucherPortal() {
                   onClick={() => handleViewModeChange('detailed')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'detailed' 
-                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
-                      : 'text-gray-500 hover:text-gray-800'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm font-semibold' 
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200'
                   }`}
                   title="Detailed Table View"
                 >
@@ -433,8 +445,8 @@ export default function VoucherPortal() {
                   onClick={() => handleViewModeChange('compact')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'compact' 
-                      ? 'bg-white text-blue-600 shadow-sm font-semibold' 
-                      : 'text-gray-500 hover:text-gray-800'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm font-semibold' 
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200'
                   }`}
                   title="Compact List View"
                 >
@@ -443,8 +455,8 @@ export default function VoucherPortal() {
               </div>
 
               {/* Results Count */}
-              <div className="text-xs text-gray-500 font-medium pl-2 border-l border-gray-200">
-                <span className="font-bold text-gray-800">{filteredAndSortedVouchers.length}</span> of {vouchers.length}
+              <div className="text-xs text-gray-500 dark:text-slate-400 font-medium pl-2 border-l border-gray-200 dark:border-slate-700">
+                <span className="font-bold text-gray-800 dark:text-white">{filteredAndSortedVouchers.length}</span> of {vouchers.length}
               </div>
             </div>
 
@@ -453,14 +465,14 @@ export default function VoucherPortal() {
 
         {/* Vouchers Display (Based on selected viewMode) */}
         {filteredAndSortedVouchers.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-200">
-            <div className="mx-auto w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 transition-colors">
+            <div className="mx-auto w-16 h-16 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
               <Receipt size={32} />
             </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-1">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">
               {vouchers.length === 0 ? 'No vouchers created yet' : 'No matching vouchers found'}
             </h3>
-            <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
+            <p className="text-gray-500 dark:text-slate-400 text-sm mb-6 max-w-md mx-auto">
               {vouchers.length === 0 
                 ? 'Create your first expense voucher to start tracking receipts and expenses.' 
                 : 'Try adjusting your search query, clearing filters, or unchecking favourites.'}
@@ -476,7 +488,7 @@ export default function VoucherPortal() {
             ) : (
               <button
                 onClick={() => { setSearchQuery(''); setFavouritesOnly(false); setGroupBy('none'); }}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all font-medium text-sm inline-flex items-center gap-2"
+                className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-all font-medium text-sm inline-flex items-center gap-2 border border-transparent dark:border-slate-700"
               >
                 <Filter size={16} />
                 Reset Filters
@@ -490,12 +502,12 @@ export default function VoucherPortal() {
                 
                 {/* Group Heading (if grouped) */}
                 {groupBy !== 'none' && (
-                  <div className="flex items-center gap-3 pb-2 border-b-2 border-gray-200">
-                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 bg-blue-600 rounded-full"></span>
+                  <div className="flex items-center gap-3 pb-2 border-b-2 border-gray-200 dark:border-slate-800">
+                    <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
                       {groupTitle}
                     </h2>
-                    <span className="text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-semibold bg-gray-200 dark:bg-slate-800 text-gray-700 dark:text-slate-300 px-2 py-0.5 rounded-full">
                       {groupItems.length} {groupItems.length === 1 ? 'voucher' : 'vouchers'}
                     </span>
                   </div>
@@ -513,17 +525,19 @@ export default function VoucherPortal() {
                         <div
                           key={voucher.id}
                           onClick={() => navigate(`/voucher/${voucher.id}`)}
-                          className={`bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
-                            voucher.isFavourite ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-200 hover:border-blue-300'
+                          className={`bg-white dark:bg-slate-900 rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
+                            voucher.isFavourite 
+                              ? 'border-amber-300 dark:border-amber-600/70 ring-1 ring-amber-200 dark:ring-amber-900/30' 
+                              : 'border-gray-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-600'
                           }`}
                         >
                           {/* Card Top Row: Code, Star & Delete */}
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex-1 pr-2">
-                              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block mb-1">
+                              <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-blue-100 dark:border-slate-700 inline-block mb-1">
                                 {code}
                               </span>
-                              <h3 className="text-base font-bold text-gray-900 line-clamp-1">
+                              <h3 className="text-base font-bold text-gray-900 dark:text-white line-clamp-1">
                                 {voucher.formData?.expenseTitle || 'Expense Voucher'}
                               </h3>
                             </div>
@@ -533,17 +547,17 @@ export default function VoucherPortal() {
                                 onClick={(e) => handleToggleFavourite(e, voucher.id)}
                                 className={`p-1.5 rounded-lg transition-colors ${
                                   voucher.isFavourite 
-                                    ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' 
-                                    : 'text-gray-300 hover:text-amber-400 hover:bg-gray-100'
+                                    ? 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/50' 
+                                    : 'text-gray-300 dark:text-slate-600 hover:text-amber-400 hover:bg-gray-100 dark:hover:bg-slate-800'
                                 }`}
                                 title={voucher.isFavourite ? 'Remove from Favourites' : 'Mark as Favourite'}
                               >
-                                <Star size={18} className={voucher.isFavourite ? 'fill-amber-500' : ''} />
+                                <Star size={18} className={voucher.isFavourite ? 'fill-amber-500 dark:fill-amber-400' : ''} />
                               </button>
 
                               <button
                                 onClick={(e) => handleDeleteVoucher(e, voucher.id)}
-                                className="text-gray-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                className="text-gray-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors opacity-0 group-hover:opacity-100"
                                 title="Delete Voucher"
                               >
                                 <Trash2 size={18} />
@@ -552,32 +566,32 @@ export default function VoucherPortal() {
                           </div>
 
                           {/* Card Meta details */}
-                          <div className="mb-4 space-y-1.5 text-sm text-gray-600">
+                          <div className="mb-4 space-y-1.5 text-sm text-gray-600 dark:text-slate-400">
                             <div className="flex items-center gap-2">
-                              <User size={15} className="text-gray-400 shrink-0" />
+                              <User size={15} className="text-gray-400 dark:text-slate-500 shrink-0" />
                               <span className="truncate">
                                 {voucher.formData?.name ? (
-                                  <span className="font-semibold text-gray-800">{voucher.formData.name}</span>
+                                  <span className="font-semibold text-gray-800 dark:text-slate-200">{voucher.formData.name}</span>
                                 ) : (
-                                  <span className="italic text-gray-400">Employee not specified</span>
+                                  <span className="italic text-gray-400 dark:text-slate-500">Employee not specified</span>
                                 )}
                               </span>
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <MapPin size={15} className="text-gray-400 shrink-0" />
+                              <MapPin size={15} className="text-gray-400 dark:text-slate-500 shrink-0" />
                               <span className="truncate">
                                 {voucher.formData?.location ? (
-                                  <span className="font-medium text-gray-700">{voucher.formData.location}</span>
+                                  <span className="font-medium text-gray-700 dark:text-slate-300">{voucher.formData.location}</span>
                                 ) : (
-                                  <span className="italic text-gray-400">Location not specified</span>
+                                  <span className="italic text-gray-400 dark:text-slate-500">Location not specified</span>
                                 )}
                               </span>
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <Calendar size={15} className="text-gray-400 shrink-0" />
-                              <span className="text-xs text-gray-500">
+                              <Calendar size={15} className="text-gray-400 dark:text-slate-500 shrink-0" />
+                              <span className="text-xs text-gray-500 dark:text-slate-400">
                                 {voucher.formData?.date
                                   ? new Date(voucher.formData.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : 'No date set'}
@@ -586,12 +600,12 @@ export default function VoucherPortal() {
                           </div>
 
                           {/* Card Footer */}
-                          <div className="border-t border-gray-100 pt-3 flex justify-between items-center text-sm">
-                            <span className="text-xs font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                          <div className="border-t border-gray-100 dark:border-slate-800 pt-3 flex justify-between items-center text-sm">
+                            <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800 px-2 py-1 rounded border border-transparent dark:border-slate-700">
                               {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
                             </span>
-                            <span className="font-black text-blue-700 text-lg">
-                              {totalAmount} <span className="text-xs font-bold text-gray-500">AED</span>
+                            <span className="font-black text-blue-700 dark:text-blue-400 text-lg">
+                              {totalAmount} <span className="text-xs font-bold text-gray-500 dark:text-slate-400">AED</span>
                             </span>
                           </div>
                         </div>
@@ -614,24 +628,26 @@ export default function VoucherPortal() {
                         <div
                           key={voucher.id}
                           onClick={() => navigate(`/voucher/${voucher.id}`)}
-                          className={`bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
-                            voucher.isFavourite ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200 hover:border-blue-300'
+                          className={`bg-white dark:bg-slate-900 rounded-2xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border relative group ${
+                            voucher.isFavourite 
+                              ? 'border-amber-300 dark:border-amber-600/70 ring-2 ring-amber-100 dark:ring-amber-900/30' 
+                              : 'border-gray-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-600'
                           }`}
                         >
                           {/* Card Header */}
-                          <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-100">
+                          <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-100 dark:border-slate-800">
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-mono text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                                <span className="font-mono text-xs font-black text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-blue-200 dark:border-slate-700">
                                   {code}
                                 </span>
                                 {receiptCount > 0 && (
-                                  <span className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">
+                                  <span className="text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                                     📸 {receiptCount} {receiptCount === 1 ? 'Receipt' : 'Receipts'}
                                   </span>
                                 )}
                               </div>
-                              <h3 className="text-lg font-bold text-gray-900 mt-1">
+                              <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-1">
                                 {voucher.formData?.expenseTitle || 'General Expense Voucher'}
                               </h3>
                             </div>
@@ -641,16 +657,16 @@ export default function VoucherPortal() {
                                 onClick={(e) => handleToggleFavourite(e, voucher.id)}
                                 className={`p-2 rounded-lg transition-colors ${
                                   voucher.isFavourite 
-                                    ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' 
-                                    : 'text-gray-300 hover:text-amber-400 hover:bg-gray-100'
+                                    ? 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/50' 
+                                    : 'text-gray-300 dark:text-slate-600 hover:text-amber-400 hover:bg-gray-100 dark:hover:bg-slate-800'
                                 }`}
                               >
-                                <Star size={20} className={voucher.isFavourite ? 'fill-amber-500' : ''} />
+                                <Star size={20} className={voucher.isFavourite ? 'fill-amber-500 dark:fill-amber-400' : ''} />
                               </button>
 
                               <button
                                 onClick={(e) => handleDeleteVoucher(e, voucher.id)}
-                                className="text-gray-300 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                className="text-gray-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <Trash2 size={20} />
                               </button>
@@ -658,22 +674,22 @@ export default function VoucherPortal() {
                           </div>
 
                           {/* Employee & Location Info Row */}
-                          <div className="grid grid-cols-2 gap-3 mb-4 bg-gray-50 p-3 rounded-xl text-xs">
+                          <div className="grid grid-cols-2 gap-3 mb-4 bg-gray-50 dark:bg-slate-800/70 p-3 rounded-xl text-xs border border-transparent dark:border-slate-700/50">
                             <div>
-                              <span className="text-gray-400 font-bold uppercase tracking-wider block mb-0.5">Employee</span>
-                              <span className="font-bold text-gray-800 text-sm block truncate">
+                              <span className="text-gray-400 dark:text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Employee</span>
+                              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm block truncate">
                                 {voucher.formData?.name || 'Not specified'}
                               </span>
-                              <span className="text-gray-500 text-[11px] block truncate">
+                              <span className="text-gray-500 dark:text-slate-400 text-[11px] block truncate">
                                 {voucher.formData?.title || 'No position'}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-400 font-bold uppercase tracking-wider block mb-0.5">Location & Date</span>
-                              <span className="font-bold text-gray-800 text-sm block truncate">
+                              <span className="text-gray-400 dark:text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Location & Date</span>
+                              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm block truncate">
                                 {voucher.formData?.location || 'Not specified'}
                               </span>
-                              <span className="text-gray-500 text-[11px] block">
+                              <span className="text-gray-500 dark:text-slate-400 text-[11px] block">
                                 {voucher.formData?.date ? new Date(voucher.formData.date).toLocaleDateString() : 'No date'}
                               </span>
                             </div>
@@ -681,25 +697,25 @@ export default function VoucherPortal() {
 
                           {/* Expense Breakdown Preview */}
                           <div className="mb-4">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                            <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
                               Expense Breakdown ({itemsCount} items)
                             </span>
                             {itemsCount === 0 ? (
-                              <p className="text-xs text-gray-400 italic py-2">No expense line items added yet.</p>
+                              <p className="text-xs text-gray-400 dark:text-slate-500 italic py-2">No expense line items added yet.</p>
                             ) : (
                               <div className="space-y-1.5">
                                 {previewExpenses.map((exp, idx) => (
-                                  <div key={exp.id || idx} className="flex justify-between items-center text-xs py-1 px-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                                    <span className="truncate pr-2 text-gray-700 font-medium">
+                                  <div key={exp.id || idx} className="flex justify-between items-center text-xs py-1 px-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
+                                    <span className="truncate pr-2 text-gray-700 dark:text-slate-200 font-medium">
                                       {exp.description || `Item #${exp.receiptNo || idx + 1}`}
                                     </span>
-                                    <span className="font-bold text-gray-900 shrink-0 font-mono">
+                                    <span className="font-bold text-gray-900 dark:text-white shrink-0 font-mono">
                                       {exp.amountAED || exp.amount || '0.00'} AED
                                     </span>
                                   </div>
                                 ))}
                                 {itemsCount > 3 && (
-                                  <p className="text-[11px] text-blue-600 font-semibold text-right pt-0.5">
+                                  <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold text-right pt-0.5">
                                     + {itemsCount - 3} more items...
                                   </p>
                                 )}
@@ -708,14 +724,14 @@ export default function VoucherPortal() {
                           </div>
 
                           {/* Card Bottom: Total & Open Action */}
-                          <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
+                          <div className="border-t border-gray-100 dark:border-slate-800 pt-3 flex justify-between items-center">
                             <div>
-                              <span className="text-[11px] text-gray-400 font-bold uppercase tracking-wider block">Total Amount</span>
-                              <span className="text-2xl font-black text-blue-700">
-                                {totalAmount} <span className="text-xs font-bold text-gray-500">AED</span>
+                              <span className="text-[11px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider block">Total Amount</span>
+                              <span className="text-2xl font-black text-blue-700 dark:text-blue-400">
+                                {totalAmount} <span className="text-xs font-bold text-gray-500 dark:text-slate-400">AED</span>
                               </span>
                             </div>
-                            <span className="text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg">
+                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform flex items-center gap-1 bg-blue-50 dark:bg-blue-950/50 px-3 py-1.5 rounded-lg border border-transparent dark:border-blue-900">
                               Open Voucher <ArrowRight size={14} />
                             </span>
                           </div>
@@ -727,10 +743,10 @@ export default function VoucherPortal() {
 
                 {/* 3. DETAILED TABLE VIEW */}
                 {viewMode === 'detailed' && (
-                  <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md border border-gray-200 dark:border-slate-800 overflow-hidden transition-colors">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                           <tr>
                             <th className="px-4 py-3 text-center w-10">⭐</th>
                             <th className="px-4 py-3">Voucher Code</th>
@@ -743,7 +759,7 @@ export default function VoucherPortal() {
                             <th className="px-4 py-3 text-center">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
                           {groupItems.map(voucher => {
                             const code = voucher.voucherCode || formatVoucherCode(voucher.id)
                             const totalAmount = calculateExpensesTotal(voucher.expenses)
@@ -753,53 +769,53 @@ export default function VoucherPortal() {
                               <tr 
                                 key={voucher.id}
                                 onClick={() => navigate(`/voucher/${voucher.id}`)}
-                                className={`hover:bg-blue-50/50 cursor-pointer transition-colors ${
-                                  voucher.isFavourite ? 'bg-amber-50/20' : ''
+                                className={`hover:bg-blue-50/50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors ${
+                                  voucher.isFavourite ? 'bg-amber-50/20 dark:bg-amber-950/20' : ''
                                 }`}
                               >
                                 <td className="px-4 py-3 text-center">
                                   <button
                                     onClick={(e) => handleToggleFavourite(e, voucher.id)}
-                                    className="text-gray-300 hover:text-amber-500 p-1"
+                                    className="text-gray-300 dark:text-slate-600 hover:text-amber-500 dark:hover:text-amber-400 p-1"
                                   >
-                                    <Star size={16} className={voucher.isFavourite ? 'fill-amber-500 text-amber-500' : ''} />
+                                    <Star size={16} className={voucher.isFavourite ? 'fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400' : ''} />
                                   </button>
                                 </td>
-                                <td className="px-4 py-3 font-mono font-bold text-blue-700 text-xs whitespace-nowrap">
+                                <td className="px-4 py-3 font-mono font-bold text-blue-700 dark:text-blue-400 text-xs whitespace-nowrap">
                                   {code}
                                 </td>
-                                <td className="px-4 py-3 font-semibold text-gray-900 max-w-[200px] truncate">
+                                <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white max-w-[200px] truncate">
                                   {voucher.formData?.expenseTitle || 'Expense Voucher'}
                                 </td>
-                                <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                                <td className="px-4 py-3 text-gray-700 dark:text-slate-200 whitespace-nowrap">
                                   <span className="font-medium block">{voucher.formData?.name || '—'}</span>
-                                  <span className="text-xs text-gray-400 block">{voucher.formData?.title || ''}</span>
+                                  <span className="text-xs text-gray-400 dark:text-slate-500 block">{voucher.formData?.title || ''}</span>
                                 </td>
-                                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                                <td className="px-4 py-3 text-gray-600 dark:text-slate-300 whitespace-nowrap">
                                   {voucher.formData?.location || '—'}
                                 </td>
-                                <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                                <td className="px-4 py-3 text-gray-500 dark:text-slate-400 text-xs whitespace-nowrap">
                                   {voucher.formData?.date ? new Date(voucher.formData.date).toLocaleDateString() : '—'}
                                 </td>
                                 <td className="px-4 py-3 text-center whitespace-nowrap">
-                                  <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                  <span className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs font-semibold border border-transparent dark:border-slate-700">
                                     {itemsCount}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-right font-black text-blue-700 whitespace-nowrap">
+                                <td className="px-4 py-3 text-right font-black text-blue-700 dark:text-blue-400 whitespace-nowrap">
                                   {totalAmount} AED
                                 </td>
                                 <td className="px-4 py-3 text-center whitespace-nowrap">
                                   <div className="flex items-center justify-center gap-1">
                                     <button
                                       onClick={() => navigate(`/voucher/${voucher.id}`)}
-                                      className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-semibold transition-colors"
+                                      className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded text-xs font-semibold transition-colors"
                                     >
                                       Open
                                     </button>
                                     <button
                                       onClick={(e) => handleDeleteVoucher(e, voucher.id)}
-                                      className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                                      className="p-1 text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
                                     >
                                       <Trash2 size={16} />
                                     </button>
@@ -816,7 +832,7 @@ export default function VoucherPortal() {
 
                 {/* 4. COMPACT LIST VIEW */}
                 {viewMode === 'compact' && (
-                  <div className="bg-white rounded-xl shadow-md border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800 overflow-hidden transition-colors">
                     {groupItems.map(voucher => {
                       const code = voucher.voucherCode || formatVoucherCode(voucher.id)
                       const totalAmount = calculateExpensesTotal(voucher.expenses)
@@ -826,36 +842,36 @@ export default function VoucherPortal() {
                         <div
                           key={voucher.id}
                           onClick={() => navigate(`/voucher/${voucher.id}`)}
-                          className="flex items-center justify-between p-3 hover:bg-blue-50/50 cursor-pointer transition-all gap-4 text-sm"
+                          className="flex items-center justify-between p-3 hover:bg-blue-50/50 dark:hover:bg-slate-800/60 cursor-pointer transition-all gap-4 text-sm"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <button
                               onClick={(e) => handleToggleFavourite(e, voucher.id)}
-                              className="text-gray-300 hover:text-amber-500 shrink-0"
+                              className="text-gray-300 dark:text-slate-600 hover:text-amber-500 dark:hover:text-amber-400 shrink-0"
                             >
-                              <Star size={16} className={voucher.isFavourite ? 'fill-amber-500 text-amber-500' : ''} />
+                              <Star size={16} className={voucher.isFavourite ? 'fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400' : ''} />
                             </button>
-                            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 shrink-0">
+                            <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-blue-100 dark:border-slate-700 shrink-0">
                               {code}
                             </span>
-                            <span className="font-semibold text-gray-900 truncate">
+                            <span className="font-semibold text-gray-900 dark:text-white truncate">
                               {voucher.formData?.expenseTitle || 'Expense Voucher'}
                             </span>
-                            <span className="text-xs text-gray-400 hidden md:inline truncate">
+                            <span className="text-xs text-gray-400 dark:text-slate-500 hidden md:inline truncate">
                               • {voucher.formData?.name || 'No employee'} ({voucher.formData?.location || 'No location'})
                             </span>
                           </div>
 
                           <div className="flex items-center gap-4 shrink-0">
-                            <span className="text-xs text-gray-500 hidden sm:inline">
+                            <span className="text-xs text-gray-500 dark:text-slate-400 hidden sm:inline">
                               {itemsCount} items
                             </span>
-                            <span className="font-bold text-blue-700 text-sm">
+                            <span className="font-bold text-blue-700 dark:text-blue-400 text-sm">
                               {totalAmount} AED
                             </span>
                             <button
                               onClick={(e) => handleDeleteVoucher(e, voucher.id)}
-                              className="text-gray-300 hover:text-red-600 p-1 rounded"
+                              className="text-gray-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 p-1 rounded"
                             >
                               <Trash2 size={16} />
                             </button>
