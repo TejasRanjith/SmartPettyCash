@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Download, Send, ScanLine, Home, Sun, Moon, Cloud, Database } from 'lucide-react'
+import { Plus, Download, Send, ScanLine, Home, Sun, Moon, Cloud, Database, Lock, ShieldAlert, ArrowLeft, User } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import ExpenseForm from './ExpenseForm'
@@ -10,26 +10,29 @@ import Toast from './Toast'
 import ReceiptScanner from './ReceiptScanner'
 import { formatVoucherCode } from '../utils/voucherUtils'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 import { voucherService, getLocalVoucherById } from '../services/voucherService'
 
 export default function VoucherDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { theme, toggleTheme, isDark } = useTheme()
+  const { user, profile } = useAuth()
+  const [accessDenied, setAccessDenied] = useState(false)
 
   const findCachedVoucher = useCallback(() => {
     try {
       if (typeof voucherService?.getLocalVoucherById === 'function') {
-        return voucherService.getLocalVoucherById(id)
+        return voucherService.getLocalVoucherById(id, user?.id)
       }
       if (typeof getLocalVoucherById === 'function') {
-        return getLocalVoucherById(id)
+        return getLocalVoucherById(id, user?.id)
       }
     } catch (e) {
       console.warn('Error reading cached voucher:', e)
     }
     return null
-  }, [id])
+  }, [id, user?.id])
 
   const [voucherCode, setVoucherCode] = useState(() => {
     const voucher = findCachedVoucher()
@@ -46,10 +49,10 @@ export default function VoucherDetail() {
   const [formData, setFormData] = useState(() => {
     const voucher = findCachedVoucher()
     return voucher?.formData || {
-      name: '',
+      name: profile?.fullName || '',
       date: new Date().toISOString().split('T')[0],
-      location: '',
-      title: '',
+      location: profile?.location || '',
+      title: profile?.title || '',
       expenseTitle: ''
     }
   })
@@ -74,20 +77,38 @@ export default function VoucherDetail() {
 
     async function fetchVoucher() {
       try {
-        const voucher = await voucherService.getVoucherById(id)
+        const voucher = await voucherService.getVoucherById(id, user?.id)
         if (voucher && isMounted) {
+          setAccessDenied(false)
           setVoucherCode(voucher.voucherCode || (String(voucher.id).startsWith('exp_voucher_') ? voucher.id : formatVoucherCode(Date.now())))
           setIsFavourite(Boolean(voucher.isFavourite))
           setFormData(voucher.formData || {
-            name: '',
+            name: profile?.fullName || '',
             date: new Date().toISOString().split('T')[0],
-            location: '',
-            title: '',
+            location: profile?.location || '',
+            title: profile?.title || '',
             expenseTitle: ''
           })
           setExpenses(voucher.expenses || [])
-        } else if (isMounted && !voucherCode) {
-          setVoucherCode(String(id).startsWith('exp_voucher_') ? id : formatVoucherCode(Date.now()))
+        } else {
+          // Check if voucher exists globally but belongs to another user (Access Denied)
+          const anyVoucher = await voucherService.getVoucherById(id, null)
+          if (anyVoucher && anyVoucher.userId && user?.id && anyVoucher.userId !== user.id) {
+            if (isMounted) setAccessDenied(true)
+            return
+          }
+          if (isMounted && !voucherCode) {
+            setVoucherCode(String(id).startsWith('exp_voucher_') ? id : formatVoucherCode(Date.now()))
+            // Apply profile defaults to empty form
+            if (profile) {
+              setFormData(prev => ({
+                ...prev,
+                name: prev.name || profile.fullName || '',
+                title: prev.title || profile.title || '',
+                location: prev.location || profile.location || ''
+              }))
+            }
+          }
         }
       } catch (err) {
         console.warn('Failed to load voucher:', err)
@@ -102,19 +123,19 @@ export default function VoucherDetail() {
 
     fetchVoucher()
     return () => { isMounted = false }
-  }, [id])
+  }, [id, user?.id])
 
   // Persist voucher changes (instant to LocalStorage, debounced to Supabase)
   useEffect(() => {
-    if (!id || !isInitialLoaded.current) return
+    if (!id || !isInitialLoaded.current || accessDenied) return
     const currentCode = voucherCode || (String(id).startsWith('exp_voucher_') ? id : formatVoucherCode(Date.now()))
     voucherService.updateVoucher(id, {
       voucherCode: currentCode,
       isFavourite,
       formData,
       expenses
-    })
-  }, [formData, expenses, id, voucherCode, isFavourite])
+    }, {}, user?.id)
+  }, [formData, expenses, id, voucherCode, isFavourite, accessDenied, user?.id])
 
   // Dynamic preview scale to fit the 1200px-wide document on any screen
   const [previewScale, setPreviewScale] = useState(1)
@@ -415,7 +436,7 @@ export default function VoucherDetail() {
           isFavourite,
           formData,
           expenses
-        }, { immediate: true })
+        }, { immediate: true }, user?.id)
       }
       showToast({ message: 'Expense form saved & submitted successfully!', type: 'success' })
     }
@@ -477,6 +498,41 @@ export default function VoucherDetail() {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-16 px-4 flex items-center justify-center text-gray-900 dark:text-slate-100 transition-colors duration-200">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-red-200 dark:border-red-900/50 text-center space-y-5">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <ShieldAlert size={36} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white">Access Restricted</h2>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mt-2">
+              This voucher belongs to another user account. Multi-user security policies prevent you from viewing or modifying vouchers that do not belong to you.
+            </p>
+          </div>
+          <div className="p-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl text-xs font-mono text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700">
+            Current User ID: <span className="text-blue-600 dark:text-blue-400 font-bold">{user?.id || 'Anonymous'}</span>
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              onClick={() => navigate('/')}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-xl font-semibold shadow-md transition-all"
+            >
+              <Home size={18} /> Return to My Portal
+            </button>
+            <button
+              onClick={() => navigate('/profile')}
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 py-2.5 px-4 rounded-xl font-semibold transition-all border border-gray-200 dark:border-slate-700"
+            >
+              <User size={18} /> View My Profile
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -621,6 +677,15 @@ export default function VoucherDetail() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* User Profile Button */}
+            <button
+              onClick={() => navigate('/profile')}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border border-transparent dark:border-slate-700 shadow-sm"
+              title="My Profile & Settings"
+            >
+              <User size={18} />
+            </button>
+
             {/* Dark/Light Mode Switcher */}
             <button
               onClick={toggleTheme}

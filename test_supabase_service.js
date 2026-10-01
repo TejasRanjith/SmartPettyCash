@@ -171,4 +171,84 @@ const afterDelete = await voucherService.getAllVouchers()
 console.log('Voucher count after deletion:', afterDelete.data.length)
 if (afterDelete.data.length !== 0) throw new Error('deleteVoucher failed')
 
-console.log('All mapper, lifecycle, and fallback tests passed 100% successfully!')
+console.log('--- Testing Multi-User Data Isolation (Tenant Privacy) ---')
+const userAliceId = 'user-alice-001'
+const userBobId = 'user-bob-002'
+
+// Alice creates a voucher
+const aliceVoucher = await voucherService.createVoucher({
+  voucherCode: 'exp_voucher_260930-111111',
+  isFavourite: false,
+  formData: {
+    name: 'Alice Smith',
+    date: '2026-09-30',
+    location: 'Dubai HQ',
+    title: 'Operations Manager',
+    expenseTitle: 'Confidential Strategy Meeting'
+  },
+  expenses: []
+}, { id: userAliceId, profile: { fullName: 'Alice Smith' } })
+
+// Bob creates a voucher
+const bobVoucher = await voucherService.createVoucher({
+  voucherCode: 'exp_voucher_260930-222222',
+  isFavourite: true,
+  formData: {
+    name: 'Bob Jones',
+    date: '2026-09-30',
+    location: 'Abu Dhabi Branch',
+    title: 'Site Supervisor',
+    expenseTitle: 'Safety Equipment Purchase'
+  },
+  expenses: []
+}, { id: userBobId, profile: { fullName: 'Bob Jones' } })
+
+console.log('Alice Voucher created with userId:', aliceVoucher.userId)
+console.log('Bob Voucher created with userId:', bobVoucher.userId)
+
+// 1. Assert Alice only sees her own voucher
+const aliceList = await voucherService.getAllVouchers(userAliceId)
+console.log('Alice voucher count:', aliceList.data.length)
+if (aliceList.data.length !== 1 || aliceList.data[0].id !== aliceVoucher.id) {
+  throw new Error(`Alice should only see 1 voucher of her own! Found: ${aliceList.data.length}`)
+}
+
+// 2. Assert Bob only sees his own voucher
+const bobList = await voucherService.getAllVouchers(userBobId)
+console.log('Bob voucher count:', bobList.data.length)
+if (bobList.data.length !== 1 || bobList.data[0].id !== bobVoucher.id) {
+  throw new Error(`Bob should only see 1 voucher of his own! Found: ${bobList.data.length}`)
+}
+
+// 3. Bob attempts direct URL / ID access to Alice's voucher (Tampering simulation)
+const bobAttemptOnAlice = await voucherService.getVoucherById(aliceVoucher.id, userBobId)
+console.log('Bob attempt to read Alice voucher result:', bobAttemptOnAlice)
+if (bobAttemptOnAlice !== null) {
+  throw new Error('SECURITY VIOLATION: Bob was able to access Alice\'s private voucher!')
+}
+
+// 4. Alice accesses her own voucher
+const aliceOwnAccess = await voucherService.getVoucherById(aliceVoucher.id, userAliceId)
+if (!aliceOwnAccess || aliceOwnAccess.id !== aliceVoucher.id) {
+  throw new Error('Alice failed to access her own voucher!')
+}
+
+// 5. Bob attempts to delete Alice's voucher
+const deleteSuccess = await voucherService.deleteVoucher(aliceVoucher.id, userBobId)
+console.log('Bob attempt to delete Alice voucher success:', deleteSuccess)
+if (deleteSuccess !== false) {
+  throw new Error('SECURITY VIOLATION: Bob was able to delete Alice\'s private voucher!')
+}
+
+// Confirm Alice's voucher is still intact
+const aliceAfterTamper = await voucherService.getVoucherById(aliceVoucher.id, userAliceId)
+if (!aliceAfterTamper) {
+  throw new Error('Alice\'s voucher was deleted despite unauthorized attempt!')
+}
+
+// Clean up
+await voucherService.deleteVoucher(aliceVoucher.id, userAliceId)
+await voucherService.deleteVoucher(bobVoucher.id, userBobId)
+
+console.log('All mapper, lifecycle, fallback, AND multi-user isolation tests passed 100% successfully!')
+

@@ -22,18 +22,29 @@ import {
   Moon,
   Cloud,
   Database,
-  RefreshCw
+  RefreshCw,
+  LogOut,
+  ChevronDown,
+  ShieldCheck,
+  Sparkles,
+  ExternalLink
 } from 'lucide-react'
 import { formatVoucherCode, calculateExpensesTotal } from '../utils/voucherUtils'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth, DEMO_USERS } from '../context/AuthContext'
 import { voucherService } from '../services/voucherService'
+import AuthModal from './AuthModal'
 
 const VIEW_MODE_KEY = 'smart-petty-cash-view-mode'
 
 export default function VoucherPortal() {
   const navigate = useNavigate()
   const { theme, toggleTheme, isDark } = useTheme()
+  const { user, profile, isCloudAuth, signOut, switchLocalUser } = useAuth()
+  
   const [vouchers, setVouchers] = useState([])
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [syncState, setSyncState] = useState({
     isCloud: voucherService.isCloudEnabled(),
     syncing: false,
@@ -68,13 +79,13 @@ export default function VoucherPortal() {
       if (voucherService.isCloudEnabled()) {
         setSyncState(prev => ({ ...prev, syncing: true }))
         try {
-          await voucherService.migrateLocalStorageToSupabase()
+          await voucherService.migrateLocalStorageToSupabase(user?.id)
         } catch (e) {
           console.warn('Auto migration error:', e)
         }
       }
 
-      const { data, source } = await voucherService.getAllVouchers()
+      const { data, source } = await voucherService.getAllVouchers(user?.id)
       if (isMounted) {
         setVouchers(data)
         setSyncState({
@@ -87,15 +98,15 @@ export default function VoucherPortal() {
 
     loadData()
     return () => { isMounted = false }
-  }, [])
+  }, [user?.id])
 
   // Manual sync trigger
   const handleManualSync = async () => {
     if (!voucherService.isCloudEnabled()) return
     setSyncState(prev => ({ ...prev, syncing: true }))
     try {
-      await voucherService.migrateLocalStorageToSupabase()
-      const { data, source } = await voucherService.getAllVouchers()
+      await voucherService.migrateLocalStorageToSupabase(user?.id)
+      const { data, source } = await voucherService.getAllVouchers(user?.id)
       setVouchers(data)
       setSyncState({
         isCloud: source === 'supabase',
@@ -108,7 +119,7 @@ export default function VoucherPortal() {
     }
   }
 
-  // Create new voucher with standardized naming convention
+  // Create new voucher with standardized naming convention and current user profile defaults
   const handleCreateVoucher = async () => {
     try {
       const timestamp = Date.now()
@@ -117,14 +128,14 @@ export default function VoucherPortal() {
         voucherCode,
         isFavourite: false,
         formData: {
-          name: '',
+          name: profile?.fullName || '',
           date: new Date().toISOString().split('T')[0],
-          location: '',
-          title: '',
+          location: profile?.location || '',
+          title: profile?.title || '',
           expenseTitle: ''
         },
         expenses: []
-      })
+      }, { id: user?.id, profile })
       setVouchers(prev => [newVoucher, ...prev])
       navigate(`/voucher/${newVoucher.voucherCode || newVoucher.id}`)
     } catch (e) {
@@ -140,7 +151,7 @@ export default function VoucherPortal() {
     setVouchers(prev => prev.map(v => 
       (v.id === voucherId || v.voucherCode === voucherId) ? { ...v, isFavourite: !currentFav } : v
     ))
-    await voucherService.toggleFavourite(voucherId, currentFav)
+    await voucherService.toggleFavourite(voucherId, currentFav, user?.id)
   }
 
   // Delete Voucher
@@ -150,7 +161,7 @@ export default function VoucherPortal() {
     const codeName = target?.voucherCode || `Voucher #${voucherId}`
     if (window.confirm(`Are you sure you want to delete ${codeName}?`)) {
       setVouchers(prev => prev.filter(v => v.id !== voucherId && v.voucherCode !== voucherId))
-      await voucherService.deleteVoucher(voucherId)
+      await voucherService.deleteVoucher(voucherId, user?.id)
     }
   }
 
@@ -259,6 +270,134 @@ export default function VoucherPortal() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-8 px-4 md:px-8 lg:px-12 text-gray-900 dark:text-slate-100 transition-colors duration-200">
       <div className="max-w-7xl mx-auto space-y-6">
         
+        {/* Top User Account Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+              {profile?.fullName ? profile.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'SP'}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
+                <span>Signed in as</span>
+                <span className="font-semibold text-gray-800 dark:text-slate-200">
+                  {profile?.fullName || user?.email || 'Guest User'}
+                </span>
+                {profile?.title && (
+                  <span className="hidden md:inline px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium text-[10px]">
+                    {profile.title}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 relative">
+            {/* Quick Demo Switcher Indicator if in Local Mode */}
+            {!isCloudAuth && (
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[11px] font-semibold border border-amber-200 dark:border-amber-800/60">
+                <ShieldCheck size={12} className="text-amber-600 dark:text-amber-400" />
+                Isolated User Space
+              </span>
+            )}
+
+            {/* User Profile / Switcher Dropdown Button */}
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all border border-gray-200 dark:border-slate-700"
+              >
+                <User size={14} className="text-blue-600 dark:text-blue-400" />
+                <span className="max-w-[140px] truncate">{profile?.fullName || 'My Account'}</span>
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                  <div 
+                    className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-3 space-y-3 animate-fade-in"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="border-b border-gray-100 dark:border-slate-800 pb-2">
+                      <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{profile?.fullName || user?.email || 'User'}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-slate-400 truncate">{user?.email || 'Local Account'}</p>
+                      {profile?.location && (
+                        <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1 mt-0.5">
+                          <MapPin size={10} /> {profile.location}
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false)
+                        navigate('/profile')
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-gray-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <User size={14} /> My Profile & Defaults
+                      </span>
+                      <ExternalLink size={12} className="opacity-60" />
+                    </button>
+
+                    {/* Multi-User Local Switcher for Testing Isolation */}
+                    {!isCloudAuth && (
+                      <div className="space-y-1.5 pt-1">
+                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-slate-500 flex items-center gap-1">
+                          <ShieldCheck size={11} className="text-amber-500" />
+                          Test Multi-User Isolation:
+                        </p>
+                        {DEMO_USERS.map(demoUser => (
+                          <button
+                            key={demoUser.id}
+                            onClick={() => {
+                              switchLocalUser(demoUser.id)
+                              setUserMenuOpen(false)
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                              user?.id === demoUser.id
+                                ? 'bg-blue-600 text-white font-semibold'
+                                : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            <span className="truncate">{demoUser.profile.fullName}</span>
+                            <span className={`text-[10px] ${user?.id === demoUser.id ? 'text-blue-100' : 'text-gray-400'}`}>
+                              {user?.id === demoUser.id ? 'Active' : 'Switch'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="border-t border-gray-100 dark:border-slate-800 pt-2 flex items-center justify-between">
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setIsAuthModalOpen(true)
+                        }}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                      >
+                        {isCloudAuth ? 'Switch Account' : 'Sign In with Cloud'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          signOut()
+                        }}
+                        className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 font-semibold"
+                      >
+                        <LogOut size={12} /> Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Header Banner */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl shadow-lg p-8 text-center text-white relative overflow-hidden">
           <img
@@ -915,6 +1054,12 @@ export default function VoucherPortal() {
             ))}
           </div>
         )}
+
+        {/* Authentication Modal */}
+        <AuthModal 
+          isOpen={isAuthModalOpen} 
+          onClose={() => setIsAuthModalOpen(false)} 
+        />
 
       </div>
     </div>

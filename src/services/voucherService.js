@@ -10,19 +10,32 @@ const pendingSyncTimeouts = new Map()
 
 /**
  * -----------------------------------------------------------------------------
- * LocalStorage Fallback Helpers
+ * LocalStorage Fallback Helpers with User Isolation Support
  * -----------------------------------------------------------------------------
  */
 
-export function getLocalVouchers() {
+let lastGeneratedId = 0
+export function generateUniqueVoucherId() {
+  let now = Date.now()
+  if (now <= lastGeneratedId) {
+    now = lastGeneratedId + 1
+  }
+  lastGeneratedId = now
+  return now
+}
+
+export function getLocalVouchers(userId = null) {
   try {
     if (typeof localStorage === 'undefined') return []
     const saved = localStorage.getItem(VOUCHERS_KEY)
+    let parsedList = []
+
     if (saved) {
       const parsed = JSON.parse(saved)
       if (Array.isArray(parsed)) {
-        return parsed.map(v => ({
+        parsedList = parsed.map(v => ({
           ...v,
+          userId: v.userId || v.user_id || null,
           voucherCode: v.voucherCode || formatVoucherCode(v.id || v.formData?.date || Date.now()),
           isFavourite: !!v.isFavourite,
           formData: v.formData || {
@@ -35,36 +48,43 @@ export function getLocalVouchers() {
           expenses: v.expenses || []
         }))
       }
-    }
-
-    // Check legacy single-voucher format
-    const legacy = localStorage.getItem(LEGACY_SAVE_KEY)
-    if (legacy) {
-      const parsedLegacy = JSON.parse(legacy)
-      if (parsedLegacy.formData || parsedLegacy.expenses?.length > 0) {
-        const timestamp = Date.now()
-        const initialVoucher = {
-          id: timestamp,
-          voucherCode: formatVoucherCode(timestamp),
-          isFavourite: false,
-          formData: parsedLegacy.formData || {
-            name: '',
-            date: new Date().toISOString().split('T')[0],
-            location: '',
-            title: '',
-            expenseTitle: ''
-          },
-          expenses: parsedLegacy.expenses || []
+    } else {
+      // Check legacy single-voucher format
+      const legacy = localStorage.getItem(LEGACY_SAVE_KEY)
+      if (legacy) {
+        const parsedLegacy = JSON.parse(legacy)
+        if (parsedLegacy.formData || parsedLegacy.expenses?.length > 0) {
+          const timestamp = Date.now()
+          const initialVoucher = {
+            id: timestamp,
+            userId: userId || null,
+            voucherCode: formatVoucherCode(timestamp),
+            isFavourite: false,
+            formData: parsedLegacy.formData || {
+              name: '',
+              date: new Date().toISOString().split('T')[0],
+              location: '',
+              title: '',
+              expenseTitle: ''
+            },
+            expenses: parsedLegacy.expenses || []
+          }
+          parsedList = [initialVoucher]
+          localStorage.setItem(VOUCHERS_KEY, JSON.stringify(parsedList))
         }
-        const initialList = [initialVoucher]
-        localStorage.setItem(VOUCHERS_KEY, JSON.stringify(initialList))
-        return initialList
       }
     }
+
+    // Filter by userId if requested (ensuring User A cannot view User B's vouchers)
+    if (userId) {
+      return parsedList.filter(v => !v.userId || v.userId === userId)
+    }
+
+    return parsedList
   } catch (err) {
     console.error('Failed to read from localStorage:', err)
+    return []
   }
-  return []
 }
 
 export function saveLocalVouchers(vouchers) {
@@ -77,13 +97,24 @@ export function saveLocalVouchers(vouchers) {
   }
 }
 
-export function getLocalVoucherById(id) {
-  const vouchers = getLocalVouchers()
-  return vouchers.find(v => (
+export function getLocalVoucherById(id, userId = null) {
+  // Read all vouchers without filtering first to locate the record
+  const allVouchers = getLocalVouchers(null)
+  const found = allVouchers.find(v => (
     v.id === parseInt(id) ||
     String(v.id) === String(id) ||
     v.voucherCode === String(id)
-  )) || null
+  ))
+
+  if (!found) return null
+
+  // If userId is provided, ensure user ownership
+  if (userId && found.userId && found.userId !== userId) {
+    // Access Denied: Voucher belongs to another user
+    return null
+  }
+
+  return found
 }
 
 /**
@@ -95,6 +126,7 @@ export function getLocalVoucherById(id) {
 export function mapDbVoucherToApp(v) {
   return {
     id: v.id,
+    userId: v.user_id || null,
     voucherCode: v.voucher_code,
     isFavourite: Boolean(v.is_favourite),
     formData: {
@@ -128,7 +160,9 @@ export function mapDbVoucherToApp(v) {
 export function mapAppToDbVoucher(voucher) {
   const code = voucher.voucherCode || formatVoucherCode(voucher.id || Date.now())
   const rawDate = voucher.formData?.date
-  return {
+  const uid = voucher.userId || voucher.user_id || null
+
+  const record = {
     voucher_code: code,
     employee_name: voucher.formData?.name || '',
     voucher_date: (rawDate && typeof rawDate === 'string' && rawDate.trim()) ? rawDate.trim() : null,
@@ -137,6 +171,12 @@ export function mapAppToDbVoucher(voucher) {
     expense_title: voucher.formData?.expenseTitle || '',
     is_favourite: Boolean(voucher.isFavourite)
   }
+
+  if (uid) {
+    record.user_id = uid
+  }
+
+  return record
 }
 
 export function mapAppToDbExpenses(expenses = [], voucherId) {
@@ -161,7 +201,7 @@ export function mapAppToDbExpenses(expenses = [], voucherId) {
 
 /**
  * -----------------------------------------------------------------------------
- * Unified Service API
+ * Unified Service API with User-Based Access Control
  * -----------------------------------------------------------------------------
  */
 
@@ -169,16 +209,16 @@ export const voucherService = {
   /**
    * Synchronous local storage accessors
    */
-  getLocalVouchers() {
-    return getLocalVouchers()
+  getLocalVouchers(userId = null) {
+    return getLocalVouchers(userId)
   },
 
   saveLocalVouchers(vouchers) {
     return saveLocalVouchers(vouchers)
   },
 
-  getLocalVoucherById(id) {
-    return getLocalVoucherById(id)
+  getLocalVoucherById(id, userId = null) {
+    return getLocalVoucherById(id, userId)
   },
 
   /**
@@ -189,16 +229,24 @@ export const voucherService = {
   },
 
   /**
-   * Fetch all vouchers (with child expenses)
-   * Tries Supabase first; on any failure or if unconfigured, falls back to localStorage.
+   * Fetch all vouchers for a given user.
+   * Enforces that users only view their own vouchers.
    */
-  async getAllVouchers() {
+  async getAllVouchers(userId = null) {
     if (this.isCloudEnabled()) {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('vouchers')
           .select(`*, expenses (*)`)
           .order('created_at', { ascending: false })
+
+        // In Supabase, if userId is passed, filter explicitly.
+        // Even without this, Supabase RLS enforces auth.uid() = user_id automatically.
+        if (userId) {
+          query = query.eq('user_id', userId)
+        }
+
+        const { data, error } = await query
 
         if (!error && Array.isArray(data)) {
           const appVouchers = data.map(mapDbVoucherToApp)
@@ -214,14 +262,14 @@ export const voucherService = {
       }
     }
 
-    const localData = getLocalVouchers()
+    const localData = getLocalVouchers(userId)
     return { data: localData, source: 'local' }
   },
 
   /**
-   * Get single voucher by id or voucherCode
+   * Get single voucher by id or voucherCode with ownership verification
    */
-  async getVoucherById(id) {
+  async getVoucherById(id, userId = null) {
     if (!id) return null
 
     if (this.isCloudEnabled()) {
@@ -236,8 +284,16 @@ export const voucherService = {
           query = query.eq('voucher_code', id)
         }
 
+        if (userId) {
+          query = query.eq('user_id', userId)
+        }
+
         const { data, error } = await query.maybeSingle()
         if (!error && data) {
+          if (userId && data.user_id && data.user_id !== userId) {
+            // Block access if voucher belongs to another user
+            return null
+          }
           return mapDbVoucherToApp(data)
         }
       } catch (err) {
@@ -245,32 +301,36 @@ export const voucherService = {
       }
     }
 
-    return getLocalVoucherById(id)
+    return getLocalVoucherById(id, userId)
   },
 
   /**
-   * Create a new voucher
+   * Create a new voucher for the logged-in user.
+   * Auto-populates employee details from user profile if not provided.
    */
-  async createVoucher(voucherData) {
-    const timestamp = Date.now()
+  async createVoucher(voucherData = {}, userContext = null) {
+    const timestamp = voucherData.id || generateUniqueVoucherId()
     const code = voucherData.voucherCode || formatVoucherCode(timestamp)
-    
+    const effectiveUserId = userContext?.id || voucherData.userId || null
+    const profile = userContext?.profile || {}
+
     const newVoucher = {
       id: timestamp,
+      userId: effectiveUserId,
       voucherCode: code,
       isFavourite: Boolean(voucherData.isFavourite),
-      formData: voucherData.formData || {
-        name: '',
-        date: new Date().toISOString().split('T')[0],
-        location: '',
-        title: '',
-        expenseTitle: ''
+      formData: {
+        name: voucherData.formData?.name || profile.fullName || '',
+        date: voucherData.formData?.date || new Date().toISOString().split('T')[0],
+        location: voucherData.formData?.location || profile.location || '',
+        title: voucherData.formData?.title || profile.title || '',
+        expenseTitle: voucherData.formData?.expenseTitle || ''
       },
       expenses: voucherData.expenses || []
     }
 
     // Always update local storage first
-    const currentLocal = getLocalVouchers()
+    const currentLocal = getLocalVouchers(null)
     saveLocalVouchers([newVoucher, ...currentLocal])
 
     if (this.isCloudEnabled()) {
@@ -307,7 +367,7 @@ export const voucherService = {
           }
 
           // Update local cache with assigned DB id
-          const updatedLocal = getLocalVouchers().map(v => 
+          const updatedLocal = getLocalVouchers(null).map(v => 
             v.voucherCode === code ? newVoucher : v
           )
           saveLocalVouchers(updatedLocal)
@@ -323,31 +383,39 @@ export const voucherService = {
   },
 
   /**
-   * Update voucher and sync expenses.
-   * Debounces Supabase update calls to avoid excessive database writes while typing.
+   * Update voucher and sync expenses with ownership verification
    */
-  async updateVoucher(id, voucherData, { immediate = false } = {}) {
+  async updateVoucher(id, voucherData, { immediate = false } = {}, userId = null) {
     if (!id) return
 
     // 1. Immediately update LocalStorage
-    const vouchers = getLocalVouchers()
+    const vouchers = getLocalVouchers(null)
     const targetCode = voucherData.voucherCode || formatVoucherCode(id)
     const existing = vouchers.find(v => 
       v.id === parseInt(id) || String(v.id) === String(id) || v.voucherCode === targetCode
     )
 
+    // Ownership check: if voucher belongs to another user, reject update
+    if (existing?.userId && userId && existing.userId !== userId) {
+      console.warn('Unauthorized update attempt on voucher:', id)
+      return null
+    }
+
     const isFavouriteVal = voucherData.isFavourite !== undefined 
       ? Boolean(voucherData.isFavourite) 
       : Boolean(existing?.isFavourite)
 
-    let updatedList
+    const effectiveUserId = existing?.userId || userId || voucherData.userId || null
+
     const updatedItem = {
       ...voucherData,
       id: isNaN(Number(id)) ? id : Number(id),
+      userId: effectiveUserId,
       voucherCode: targetCode,
       isFavourite: isFavouriteVal
     }
 
+    let updatedList
     if (existing) {
       updatedList = vouchers.map(v => 
         (v.id === parseInt(id) || String(v.id) === String(id) || v.voucherCode === targetCode)
@@ -364,7 +432,7 @@ export const voucherService = {
       const syncTask = async () => {
         try {
           // Find the Supabase record ID first
-          let query = supabase.from('vouchers').select('id, voucher_code, is_favourite')
+          let query = supabase.from('vouchers').select('id, user_id, voucher_code, is_favourite')
           if (String(id).startsWith('exp_voucher_')) {
             query = query.eq('voucher_code', id)
           } else if (!isNaN(Number(id))) {
@@ -373,8 +441,11 @@ export const voucherService = {
             query = query.eq('voucher_code', targetCode)
           }
 
-          const { data: existingDbRecord } = await query.maybeSingle()
+          if (userId) {
+            query = query.eq('user_id', userId)
+          }
 
+          const { data: existingDbRecord } = await query.maybeSingle()
           let dbVoucherId = existingDbRecord?.id
 
           if (dbVoucherId) {
@@ -391,6 +462,9 @@ export const voucherService = {
             if (voucherData.isFavourite !== undefined) {
               updatePayload.is_favourite = Boolean(voucherData.isFavourite)
             }
+            if (effectiveUserId) {
+              updatePayload.user_id = effectiveUserId
+            }
 
             await supabase
               .from('vouchers')
@@ -406,7 +480,12 @@ export const voucherService = {
             }
           } else {
             // Create if not yet present in Supabase
-            const newPayload = mapAppToDbVoucher({ ...voucherData, voucherCode: targetCode, isFavourite: isFavouriteVal })
+            const newPayload = mapAppToDbVoucher({ 
+              ...voucherData, 
+              userId: effectiveUserId, 
+              voucherCode: targetCode, 
+              isFavourite: isFavouriteVal 
+            })
             const { data: createdRecord } = await supabase
               .from('vouchers')
               .insert([newPayload])
@@ -415,7 +494,7 @@ export const voucherService = {
 
             if (createdRecord?.id) {
               // Update local cache so local id matches Supabase row id
-              const localList = getLocalVouchers().map(v => 
+              const localList = getLocalVouchers(null).map(v => 
                 v.voucherCode === targetCode ? { ...v, id: createdRecord.id } : v
               )
               saveLocalVouchers(localList)
@@ -454,17 +533,20 @@ export const voucherService = {
   },
 
   /**
-   * Toggle favourite flag on a voucher
+   * Toggle favourite flag on a voucher with ownership check
    */
-  async toggleFavourite(voucherId, currentStatus) {
+  async toggleFavourite(voucherId, currentStatus, userId = null) {
     const newStatus = !currentStatus
 
     // Update local storage
-    const vouchers = getLocalVouchers().map(v => 
-      (v.id === voucherId || String(v.id) === String(voucherId) || v.voucherCode === voucherId)
-        ? { ...v, isFavourite: newStatus }
-        : v
-    )
+    const vouchers = getLocalVouchers(null).map(v => {
+      const match = (v.id === voucherId || String(v.id) === String(voucherId) || v.voucherCode === voucherId)
+      if (match) {
+        if (userId && v.userId && v.userId !== userId) return v // Unauthorized
+        return { ...v, isFavourite: newStatus }
+      }
+      return v
+    })
     saveLocalVouchers(vouchers)
 
     if (this.isCloudEnabled()) {
@@ -474,6 +556,9 @@ export const voucherService = {
           query = query.or(`id.eq.${voucherId},voucher_code.eq.${voucherId}`)
         } else {
           query = query.eq('voucher_code', voucherId)
+        }
+        if (userId) {
+          query = query.eq('user_id', userId)
         }
         await query
       } catch (err) {
@@ -485,11 +570,19 @@ export const voucherService = {
   },
 
   /**
-   * Delete voucher by ID or voucherCode
+   * Delete voucher by ID or voucherCode with ownership verification
    */
-  async deleteVoucher(voucherId) {
-    // Delete from local storage
-    const current = getLocalVouchers()
+  async deleteVoucher(voucherId, userId = null) {
+    const current = getLocalVouchers(null)
+    const target = current.find(v => (
+      v.id === voucherId || String(v.id) === String(voucherId) || v.voucherCode === voucherId
+    ))
+
+    if (target?.userId && userId && target.userId !== userId) {
+      console.warn('Unauthorized delete attempt for voucher:', voucherId)
+      return false
+    }
+
     const updated = current.filter(v => (
       v.id !== voucherId &&
       String(v.id) !== String(voucherId) &&
@@ -505,6 +598,9 @@ export const voucherService = {
         } else {
           query = query.eq('voucher_code', voucherId)
         }
+        if (userId) {
+          query = query.eq('user_id', userId)
+        }
         await query
       } catch (err) {
         console.warn('Failed to delete voucher from Supabase:', err)
@@ -519,114 +615,109 @@ export const voucherService = {
    * Supports File, Blob, and Base64 data URLs.
    * Falls back to Base64 data URL if storage is unavailable or unconfigured.
    */
-  async uploadReceiptImage(fileOrDataUrl, voucherCode = 'general') {
-    if (!fileOrDataUrl) return null
+  async uploadReceiptImage(fileOrBlob, voucherCode = 'general') {
+    if (!fileOrBlob) return ''
+
+    // If it's already a remote cloud URL, return as-is
+    if (typeof fileOrBlob === 'string' && (fileOrBlob.startsWith('http://') || fileOrBlob.startsWith('https://'))) {
+      return fileOrBlob
+    }
 
     if (this.isCloudEnabled()) {
       try {
-        let file = fileOrDataUrl
+        let uploadBlob = fileOrBlob
         let fileExt = 'jpg'
-        let contentType = 'image/jpeg'
 
-        if (typeof fileOrDataUrl === 'string') {
-          if (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://')) {
-            return fileOrDataUrl
-          }
-          if (fileOrDataUrl.startsWith('data:')) {
-            const match = fileOrDataUrl.match(/^data:([^;]+);base64,(.*)$/)
-            if (match) {
-              contentType = match[1]
-              fileExt = contentType.split('/')[1] || 'jpg'
-              const binaryStr = typeof atob !== 'undefined' 
-                ? atob(match[2]) 
-                : Buffer.from(match[2], 'base64').toString('binary')
-              const byteNumbers = new Uint8Array(binaryStr.length)
-              for (let i = 0; i < binaryStr.length; i++) {
-                byteNumbers[i] = binaryStr.charCodeAt(i)
-              }
-              file = new Blob([byteNumbers], { type: contentType })
+        // Convert base64 data URL to Blob if necessary
+        if (typeof fileOrBlob === 'string' && fileOrBlob.startsWith('data:')) {
+          const match = fileOrBlob.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/)
+          if (match) {
+            const mimeType = match[1]
+            fileExt = mimeType.split('/')[1] || 'jpg'
+            const byteCharacters = atob(match[2])
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i)
             }
+            const byteArray = new Uint8Array(byteNumbers)
+            uploadBlob = new Blob([byteArray], { type: mimeType })
           }
-        } else if (fileOrDataUrl?.name) {
-          fileExt = fileOrDataUrl.name.split('.').pop() || 'jpg'
-          contentType = fileOrDataUrl.type || 'image/jpeg'
+        } else if (fileOrBlob.name) {
+          fileExt = fileOrBlob.name.split('.').pop() || 'jpg'
         }
 
-        const cleanCode = (voucherCode || 'voucher').replace(/[^a-zA-Z0-9_-]/g, '_')
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
-        const filePath = `${cleanCode}/${fileName}`
+        const safeCode = (voucherCode || 'voucher').replace(/[^a-zA-Z0-9_-]/g, '_')
+        const timestamp = Date.now()
+        const randomPart = Math.random().toString(36).substring(2, 7)
+        const filePath = `${safeCode}/${timestamp}_${randomPart}.${fileExt}`
 
         const { data, error } = await supabase.storage
           .from('receipts')
-          .upload(filePath, file, {
-            contentType,
-            upsert: true
+          .upload(filePath, uploadBlob, {
+            cacheControl: '3600',
+            upsert: false
           })
 
-        if (!error && data) {
+        if (!error && data?.path) {
           const { data: publicUrlData } = supabase.storage
             .from('receipts')
-            .getPublicUrl(filePath)
+            .getPublicUrl(data.path)
 
           if (publicUrlData?.publicUrl) {
             return publicUrlData.publicUrl
           }
         } else if (error) {
-          console.warn('Supabase storage upload error, falling back to Base64:', error.message)
+          console.warn('Supabase storage upload error:', error.message)
         }
       } catch (err) {
-        console.warn('Supabase storage upload exception, falling back to Base64:', err)
+        console.warn('Receipt upload to Supabase storage failed, falling back to base64:', err)
       }
     }
 
-    // Fallback: If it's already a string (URL or Base64), return it directly
-    if (typeof fileOrDataUrl === 'string') {
-      return fileOrDataUrl
+    // Fallback: If it's a File or Blob, convert to Base64 data URL
+    if (typeof fileOrBlob !== 'string') {
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.onerror = () => resolve('')
+        reader.readAsDataURL(fileOrBlob)
+      })
     }
 
-    // Fallback: Read file/blob as Base64 Data URL
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = () => reject(new Error('Failed to read image file'))
-      reader.readAsDataURL(fileOrDataUrl)
-    })
+    return fileOrBlob
   },
 
   /**
-   * One-time or on-demand migration of localStorage vouchers into Supabase
+   * One-time or manual migration from LocalStorage to Supabase Cloud for a specific user
    */
-  async migrateLocalStorageToSupabase() {
+  async migrateLocalStorageToSupabase(targetUserId = null) {
     if (!this.isCloudEnabled()) {
-      return { success: false, migratedCount: 0, message: 'Supabase is not configured' }
+      return { success: false, message: 'Supabase cloud is not configured' }
     }
 
     try {
-      const localVouchers = getLocalVouchers()
+      const localVouchers = getLocalVouchers(targetUserId)
       if (!localVouchers || localVouchers.length === 0) {
-        return { success: true, migratedCount: 0, message: 'No local vouchers to migrate' }
+        return { success: true, migratedCount: 0, message: 'No local vouchers found to migrate' }
       }
 
-      // Fetch existing voucher codes in Supabase to avoid duplicates
-      const { data: existingCloudVouchers, error: checkError } = await supabase
+      // Check existing vouchers in Supabase
+      const { data: existingDbVouchers } = await supabase
         .from('vouchers')
         .select('voucher_code')
 
-      if (checkError) {
-        throw new Error(checkError.message)
-      }
-
-      const existingCodeSet = new Set((existingCloudVouchers || []).map(v => v.voucher_code))
+      const existingCodeSet = new Set((existingDbVouchers || []).map(v => v.voucher_code))
       let migratedCount = 0
 
       for (const v of localVouchers) {
         if (!existingCodeSet.has(v.voucherCode)) {
-          // 1. Insert voucher
+          // 1. Insert Voucher
           const rawDate = v.formData?.date
           const { data: insertedVoucher, error: vError } = await supabase
             .from('vouchers')
             .insert([{
               voucher_code: v.voucherCode,
+              user_id: targetUserId || v.userId || null,
               employee_name: v.formData?.name || '',
               voucher_date: (rawDate && typeof rawDate === 'string' && rawDate.trim()) ? rawDate.trim() : null,
               location: v.formData?.location || '',
@@ -662,7 +753,7 @@ export const voucherService = {
             }
 
             // Sync updated ID & receipt image URLs to local cache
-            const updatedLocal = getLocalVouchers().map(locV => 
+            const updatedLocal = getLocalVouchers(null).map(locV => 
               locV.voucherCode === v.voucherCode ? { ...locV, id: insertedVoucher.id, expenses: processedExpenses } : locV
             )
             saveLocalVouchers(updatedLocal)
