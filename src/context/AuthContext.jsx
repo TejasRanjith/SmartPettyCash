@@ -65,8 +65,8 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.error('Failed to read current local user:', e)
     }
-    // Default to Alice if no user active in local mode
-    return DEMO_USERS[0]
+    // Return null when not logged in to enforce base landing / login page
+    return null
   }
 
   // ---------------------------------------------------------------------------
