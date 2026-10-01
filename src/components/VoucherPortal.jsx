@@ -270,8 +270,20 @@ export default function VoucherPortal() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-8 px-4 md:px-8 lg:px-12 text-gray-900 dark:text-slate-100 transition-colors duration-200">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Top User Account Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-sm transition-colors">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl shadow-lg p-8 text-center text-white relative overflow-hidden">
+          <img
+            src="/image.png"
+            alt="Company Logo"
+            className="mx-auto object-contain mb-4 relative z-10"
+            style={{ width: '384px', maxHeight: '288px' }}
+          />
+          <h2 className="text-3xl md:text-4xl font-extrabold mt-2 relative z-10">Petty Cash Portal</h2>
+          <p className="text-blue-100 mt-2 relative z-10">Manage, group, filter and track your business expense vouchers</p>
+        </div>
+
+        {/* User Account Bar (Placed Directly Below Header Banner) */}
+        <div className="relative z-30 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-sm transition-colors">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
               {profile?.fullName ? profile.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'SP'}
@@ -304,7 +316,7 @@ export default function VoucherPortal() {
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all border border-gray-200 dark:border-slate-700"
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all border border-gray-200 dark:border-slate-700 shadow-sm"
               >
                 <User size={14} className="text-blue-600 dark:text-blue-400" />
                 <span className="max-w-[140px] truncate">{profile?.fullName || 'My Account'}</span>
@@ -315,7 +327,7 @@ export default function VoucherPortal() {
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div 
-                    className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-3 space-y-3 animate-fade-in"
+                    className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 p-3 space-y-3 animate-fade-in"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="border-b border-gray-100 dark:border-slate-800 pb-2">
@@ -396,18 +408,6 @@ export default function VoucherPortal() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Header Banner */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl shadow-lg p-8 text-center text-white relative overflow-hidden">
-          <img
-            src="/image.png"
-            alt="Company Logo"
-            className="mx-auto object-contain mb-4 relative z-10"
-            style={{ width: '384px', maxHeight: '288px' }}
-          />
-          <h2 className="text-3xl md:text-4xl font-extrabold mt-2 relative z-10">Petty Cash Portal</h2>
-          <p className="text-blue-100 mt-2 relative z-10">Manage, group, filter and track your business expense vouchers</p>
         </div>
 
         {/* Overview Stats Cards */}
